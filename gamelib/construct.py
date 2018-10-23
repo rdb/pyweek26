@@ -38,12 +38,26 @@ class Construct(object):
 
         self.connections = {}
 
+        debug_label_text = core.TextNode("debug_label")
+        debug_label_text.set_card_color((0, 0.5, 0, 1))
+        debug_label_text.set_card_as_margin(0.5, 0.5, 0.5, 0.5)
+        self.debug_label = self.root.attach_new_node(debug_label_text)
+        self.debug_label.set_pos(-0.5, -1, 1.5)
+        self.debug_label.set_scale(0.2)
+        self.debug_label.set_light_off(1)
+        self.debug_label.set_depth_write(False)
+        self.debug_label.node().set_text("0V")
+
     def __repr__(self):
         return "<{} \"{}\">".format(type(self).__name__, self.name)
 
     @property
     def pos(self):
         return core.Point2(self.x, self.y)
+
+    @property
+    def neighbours(self):
+        return [node for node, wire in self.connections.items() if wire.placed]
 
     def destroy(self):
         for wire in list(self.connections.values()):
@@ -78,6 +92,9 @@ class Construct(object):
 
     def unhighlight(self):
         self.label.hide()
+
+    def on_voltage_change(self, voltage):
+        self.debug_label.node().set_text("{:.1f} V".format(voltage))
 
     def on_update(self):
         """Updates state based on position information of neighbours."""

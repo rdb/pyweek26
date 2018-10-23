@@ -112,6 +112,11 @@ class Game(ShowBase):
                 self.mode = 'placing'
 
         elif self.mode == 'placing':
+            construct = self.world.pick_closest_construct(self.pylon.x, self.pylon.y, constants.selection_distance)
+            if construct and construct is not self.placing_wire.target:
+                print("Cannot place here!")
+                return
+
             self.placing_wire.finish_placement()
 
             # Continue placing if we just placed a pylon.

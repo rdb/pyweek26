@@ -3,6 +3,7 @@ from panda3d import core
 from . import constructs
 
 import math
+import numpy
 
 
 class World(object):
@@ -44,6 +45,7 @@ class World(object):
 
         self.add_town((0, -2), "Oldtown")
         self.add_town((2, 3), "Newville")
+        self.towns[0].powered = True
 
         self.gen = constructs.Generator(self, (-4, 3), "Nuclear")
         self.gen.placed = True
@@ -79,8 +81,92 @@ class World(object):
 
         return closest
 
+    def calc_power(self, a):
+        # Gather all nodes connected
+        nodes = self.find_nodes(a)
+
+        # Prune nodes with only one connection, unless they provide or consume
+        # power.
+        discarded = -1
+        while discarded != 0:
+            discarded = 0
+            for node in tuple(nodes):
+                if isinstance(node, constructs.Pylon):
+                    if len(set(node.neighbours) & nodes) < 2:
+                        nodes.discard(node)
+                        discarded += 1
+
+        # Now create a linear system for Modified Nodal Analysis.
+        nodes = tuple(nodes)
+        matrix = []
+        ords = []
+
+        for i, node in enumerate(nodes):
+            row = [0] * (len(nodes) + 1)
+
+            for node2 in node.neighbours:
+                if node2 in nodes:
+                    j = nodes.index(node2)
+                    row[i] += 1
+                    row[j] += -1
+
+            if isinstance(node, constructs.Generator):
+                # Generator current is an unknown.
+                row[-1] = 1
+
+            matrix.append(row)
+
+            if isinstance(node, constructs.Town):
+                # Town: consumes 3A.
+                ords.append(-node.current)
+            else:
+                ords.append(0)
+
+        # Finally, one more equation: all the generators combined produce
+        # enough current to satisfy all the towns.
+        row = [0] * (len(nodes) + 1)
+        row[-1] = 1
+        ords.append(0)
+        for i, node in enumerate(nodes):
+            if isinstance(node, constructs.Town):
+                if node.powered:
+                    row[i] = 1.0 / node.resistance
+                else:
+                    row[i] = 0
+
+        matrix.append(row)
+
+        try:
+            results = numpy.linalg.solve(matrix, ords)
+        except:
+            # Shouldn't happen, but better than nothing?
+            results = numpy.linalg.lstsq(matrix, ords)[0]
+
+        for node, result in zip(nodes, results):
+            for other, wire in list(node.connections.items()):
+                if other in nodes:
+                    current = abs(result - results[nodes.index(other)])
+                else:
+                    current = 0
+
+                wire.on_current_change(current)
+
+            node.on_voltage_change(result)
+
+    def find_nodes(self, start, visited=frozenset()):
+        nodes = set(visited)
+        nodes.add(start)
+
+        for node in start.neighbours:
+            if node not in visited:
+                nodes |= self.find_nodes(node, nodes)
+
+        return nodes
+
     def step(self, dt):
         """Runs one iteration of the game logic."""
+
+        self.calc_power(self.gen)
 
         for town in self.towns:
             town.grow(dt)

@@ -6,8 +6,8 @@ from . import constants
 
 class PowerWire(object):
     drawer = core.LineSegs()
-    drawer.set_color((0.05, 0.05, 0.05, 1))
-    drawer.set_thickness(2)
+    #drawer.set_color((0.05, 0.05, 0.05, 1))
+    drawer.set_thickness(4)
 
     drawer.move_to((0, 0, 1))
     drawer.draw_to((0, 1, 1))
@@ -30,6 +30,8 @@ class PowerWire(object):
     wires = drawer.create(False)
     del drawer
 
+    resistance = 1.0
+
     def __init__(self, world, origin, target):
         self.world = world
         self.origin = origin
@@ -40,6 +42,19 @@ class PowerWire(object):
 
         self.path = self.world.root.attach_new_node(copy(self.wires))
         self.path.set_light_off(1)
+        self.path.set_color_scale((0.05, 0.05, 0.05, 1))
+
+        debug_label_text = core.TextNode("debug_label")
+        debug_label_text.set_card_color((1, 0, 0, 1))
+        debug_label_text.set_card_as_margin(0.5, 0.5, 0.5, 0.5)
+        debug_label_text.set_align(core.TextNode.A_center)
+        self.debug_label = self.world.root.attach_new_node(debug_label_text)
+        pos = (self.origin.pos + self.target.pos) * 0.5
+        self.debug_label.set_pos(pos[0], pos[1], 1)
+        self.debug_label.set_scale(0.2)
+        self.debug_label.set_light_off(1)
+        self.debug_label.set_depth_write(False)
+        self.debug_label.node().set_text("0 A")
 
     def __repr__(self):
         return "{!r}--{!r}".format(self.origin, self.target)
@@ -88,11 +103,7 @@ class PowerWire(object):
         del self.origin.connections[self.target]
 
         self.on_update()
-
-        self.target.on_update()
-        self.origin.on_update()
-
-        self.path.remove_node()
+        self.destroy()
 
     def finish_placement(self):
         assert not self.placed
@@ -102,13 +113,36 @@ class PowerWire(object):
         self.target.placed = True
 
     def destroy(self):
-        self.path.remove_node()
-
         if self.origin.connections.get(self.target) is self:
             del self.origin.connections[self.target]
 
         if self.target.connections.get(self.origin) is self:
             del self.target.connections[self.origin]
+
+        self.origin.on_update()
+        self.target.on_update()
+
+        self.path.remove_node()
+        self.debug_label.remove_node()
+
+    def on_current_change(self, current):
+        """Called to process an update in current flowing through."""
+
+        power = current ** 2 * self.resistance
+        self.debug_label.node().set_text("{:.1f} W".format(power))
+
+        if power > 3:
+            print("{} power exceeds {}, destroying".format(self, power))
+            self.destroy()
+        elif power > 2:
+            self.path.set_color_scale((1, 3 - power, 0, 1))
+        elif power > 1:
+            self.path.set_color_scale((power - 1, 1, 0, 1))
+        elif power > 0:
+            self.path.set_color_scale((0, power, 0, 1))
+        else:
+            self.path.set_color_scale((0.05, 0.05, 0.05, 1))
+
 
     def on_update(self):
         """Called when position information of neighbours changes."""
@@ -116,3 +150,6 @@ class PowerWire(object):
         self.path.set_pos(self.origin.x, self.origin.y, 0)
         self.path.look_at(self.target.x, self.target.y, 0)
         self.path.set_sy((self.target.root.get_pos() - self.origin.root.get_pos()).length())
+
+        pos = (self.origin.pos + self.target.pos) * 0.5
+        self.debug_label.set_pos(pos[0] + -0.5, pos[1] + -1, 1.5)
