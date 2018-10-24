@@ -80,6 +80,8 @@ class PowerWire(object):
         if self.target is not to:
             del self.target.connections[self.origin]
             del self.origin.connections[self.target]
+            self.target.on_update()
+
             self.target = to
             self.target.connections[self.origin] = self
             self.origin.connections[self.target] = self
