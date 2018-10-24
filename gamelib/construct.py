@@ -39,16 +39,17 @@ class Construct(object):
 
         self.connections = {}
 
-        debug_label_text = core.TextNode("debug_label")
-        debug_label_text.set_card_color((0, 0.5, 0, 1))
-        debug_label_text.set_card_as_margin(0.5, 0.5, 0.5, 0.5)
-        self.debug_label = self.root.attach_new_node(debug_label_text)
-        self.debug_label.set_pos(-0.5, -1, 1.5)
-        self.debug_label.set_scale(0.2)
-        self.debug_label.set_light_off(1)
-        self.debug_label.set_color_scale_off(1)
-        self.debug_label.set_depth_write(False)
-        self.debug_label.node().set_text("0V")
+        if constants.show_debug_labels:
+            debug_label_text = core.TextNode("debug_label")
+            debug_label_text.set_card_color((0, 0.5, 0, 1))
+            debug_label_text.set_card_as_margin(0.5, 0.5, 0.5, 0.5)
+            self.debug_label = self.root.attach_new_node(debug_label_text)
+            self.debug_label.set_pos(-0.5, -1, 1.5)
+            self.debug_label.set_scale(0.2)
+            self.debug_label.set_light_off(1)
+            self.debug_label.set_color_scale_off(1)
+            self.debug_label.set_depth_write(False)
+            self.debug_label.node().set_text("0V")
 
     def __repr__(self):
         return "<{} \"{}\">".format(type(self).__name__, self.name)
@@ -98,7 +99,8 @@ class Construct(object):
         self.root.clear_color_scale()
 
     def on_voltage_change(self, voltage):
-        self.debug_label.node().set_text("{:.1f} V".format(voltage))
+        if constants.show_debug_labels:
+            self.debug_label.node().set_text("{:.1f} V".format(voltage))
 
     def on_update(self):
         """Updates state based on position information of neighbours."""

@@ -34,17 +34,18 @@ class PowerWire(object):
         self.path.set_light_off(1)
         self.path.set_color_scale((0.05, 0.05, 0.05, 1))
 
-        debug_label_text = core.TextNode("debug_label")
-        debug_label_text.set_card_color((1, 0, 0, 1))
-        debug_label_text.set_card_as_margin(0.5, 0.5, 0.5, 0.5)
-        debug_label_text.set_align(core.TextNode.A_center)
-        self.debug_label = self.world.root.attach_new_node(debug_label_text)
-        pos = (self.origin.pos + self.target.pos) * 0.5
-        self.debug_label.set_pos(pos[0], pos[1], 1)
-        self.debug_label.set_scale(0.2)
-        self.debug_label.set_light_off(1)
-        self.debug_label.set_depth_write(False)
-        self.debug_label.node().set_text("0 A")
+        if constants.show_debug_labels:
+            debug_label_text = core.TextNode("debug_label")
+            debug_label_text.set_card_color((1, 0, 0, 1))
+            debug_label_text.set_card_as_margin(0.5, 0.5, 0.5, 0.5)
+            debug_label_text.set_align(core.TextNode.A_center)
+            self.debug_label = self.world.root.attach_new_node(debug_label_text)
+            pos = (self.origin.pos + self.target.pos) * 0.5
+            self.debug_label.set_pos(pos[0], pos[1], 1)
+            self.debug_label.set_scale(0.2)
+            self.debug_label.set_light_off(1)
+            self.debug_label.set_depth_write(False)
+            self.debug_label.node().set_text("0 A")
 
     def __repr__(self):
         return "{!r}--{!r}".format(self.origin, self.target)
@@ -115,13 +116,16 @@ class PowerWire(object):
         self.target.on_update()
 
         self.path.remove_node()
-        self.debug_label.remove_node()
+        if constants.show_debug_labels:
+            self.debug_label.remove_node()
 
     def on_current_change(self, current):
         """Called to process an update in current flowing through."""
 
         power = current ** 2 * self.resistance
-        self.debug_label.node().set_text("{:.1f} W".format(power))
+
+        if constants.show_debug_labels:
+            self.debug_label.node().set_text("{:.1f} W".format(power))
 
         if power > 3:
             print("{} power exceeds {}, destroying".format(self, power))
@@ -143,5 +147,6 @@ class PowerWire(object):
         self.path.look_at(self.target.x, self.target.y, 0)
         self.path.set_sy((self.target.root.get_pos() - self.origin.root.get_pos()).length())
 
-        pos = (self.origin.pos + self.target.pos) * 0.5
-        self.debug_label.set_pos(pos[0] + -0.5, pos[1] + -1, 1.5)
+        if constants.show_debug_labels:
+            pos = (self.origin.pos + self.target.pos) * 0.5
+            self.debug_label.set_pos(pos[0] + -0.5, pos[1] + -1, 1.5)
