@@ -45,7 +45,7 @@ class World(object):
 
         self.add_town((0, -2), "Oldtown")
         self.add_town((2, 3), "Newville")
-        self.towns[0].powered = True
+        self.towns[0].on_power_on()
 
         self.gen = constructs.Generator(self, (-4, 3), "Nuclear")
         self.gen.placed = True
@@ -95,6 +95,9 @@ class World(object):
                     if len(set(node.neighbours) & nodes) < 2:
                         nodes.discard(node)
                         discarded += 1
+
+        if len(nodes) <= 1:
+            return
 
         # Now create a linear system for Modified Nodal Analysis.
         nodes = tuple(nodes)
