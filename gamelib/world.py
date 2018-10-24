@@ -144,7 +144,7 @@ class World(object):
 
         for node, result in zip(nodes, results):
             for other, wire in list(node.connections.items()):
-                if other in nodes:
+                if wire.placed and other in nodes:
                     current = abs(result - results[nodes.index(other)])
                 else:
                     current = 0
