@@ -26,6 +26,7 @@ class Construct(object):
         self.label.set_pos(0.5, -1, 1.5)
         self.label.set_scale(0.2)
         self.label.set_light_off(1)
+        self.label.set_color_scale_off(1)
         self.label.set_depth_write(False)
 
         cm = core.CardMaker("arrow")
@@ -45,6 +46,7 @@ class Construct(object):
         self.debug_label.set_pos(-0.5, -1, 1.5)
         self.debug_label.set_scale(0.2)
         self.debug_label.set_light_off(1)
+        self.debug_label.set_color_scale_off(1)
         self.debug_label.set_depth_write(False)
         self.debug_label.node().set_text("0V")
 
@@ -89,9 +91,11 @@ class Construct(object):
 
     def highlight(self):
         self.label.show()
+        self.root.set_color_scale((2, 2, 2, 1))
 
     def unhighlight(self):
         self.label.hide()
+        self.root.clear_color_scale()
 
     def on_voltage_change(self, voltage):
         self.debug_label.node().set_text("{:.1f} V".format(voltage))
