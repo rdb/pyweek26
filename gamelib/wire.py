@@ -1,5 +1,6 @@
 from panda3d import core
 from copy import copy
+import math
 
 from . import constants
 
@@ -9,23 +10,12 @@ class PowerWire(object):
     #drawer.set_color((0.05, 0.05, 0.05, 1))
     drawer.set_thickness(4)
 
-    drawer.move_to((0, 0, 1))
-    drawer.draw_to((0, 1, 1))
-
-    drawer.move_to((-0.1, 0, 0.9))
-    drawer.draw_to((-0.1, 1, 0.9))
-    drawer.move_to((0.1, 0, 0.9))
-    drawer.draw_to((0.1, 1, 0.9))
-
-    drawer.move_to((-0.15, 0, 0.8))
-    drawer.draw_to((-0.15, 1, 0.8))
-    drawer.move_to((0.15, 0, 0.8))
-    drawer.draw_to((0.15, 1, 0.8))
-
-    drawer.move_to((-0.1, 0, 0.7))
-    drawer.draw_to((-0.1, 1, 0.7))
-    drawer.move_to((0.1, 0, 0.7))
-    drawer.draw_to((0.1, 1, 0.7))
+    sag = 0.25
+    for x, z in (0, 1), (-0.1, 0.9), (0.1, 0.9), (-0.15, 0.8), (0.15, 0.9), (-0.1, 0.7), (0.1, 0.7):
+        drawer.move_to((x, 0, z))
+        for y in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
+            drawer.draw_to((x, y, z - math.sin(y * math.pi) * sag))
+        drawer.draw_to((x, 1, z))
 
     wires = drawer.create(False)
     del drawer
