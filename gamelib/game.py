@@ -22,8 +22,12 @@ class Game(ShowBase):
         self.disable_mouse()
         self.pivot = self.world.root.attach_new_node("pivot")
         self.camera.reparent_to(self.pivot)
-        self.camera.set_pos(0, -14, 10)
+        self.camera.set_pos(0, -15, 15)
         self.camera.look_at(0, 0, 0)
+
+        self.lens = self.cam.node().get_lens(0)
+        self.lens.focal_length = 0.4
+        self.lens.set_fov(50)
 
         self.pivot.set_h(20)
 
@@ -57,11 +61,13 @@ class Game(ShowBase):
         # Keyboard controls
         hor = mw.is_button_down('arrow_right') - mw.is_button_down('arrow_left')
         if hor != 0:
-            self.camera.set_x(self.camera.get_x() + hor * constants.camera_speed * self.clock.dt)
+            speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
+            self.camera.set_x(self.camera.get_x() + hor * speed * self.clock.dt)
 
         ver = mw.is_button_down('arrow_up') - mw.is_button_down('arrow_down')
         if ver != 0:
-            self.camera.set_y(self.camera.get_y() + ver * constants.camera_speed * self.clock.dt)
+            speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
+            self.camera.set_y(self.camera.get_y() + ver * speed * self.clock.dt)
 
         # Mouse controls
         construct = None
@@ -70,7 +76,7 @@ class Game(ShowBase):
             pos3d = core.Point3()
             near = core.Point3()
             far = core.Point3()
-            base.camNode.get_lens(0).extrude(mpos, near, far)
+            self.lens.extrude(mpos, near, far)
             if self.world.plane.intersects_line(pos3d,
                 self.world.root.get_relative_point(self.camera, near),
                 self.world.root.get_relative_point(self.camera, far)):
@@ -100,8 +106,9 @@ class Game(ShowBase):
         return task.cont
 
     def on_zoom(self, amount):
-        lens = self.cam.node().get_lens(0)
-        lens.set_fov(lens.get_fov() * (1.0 + amount * 0.1))
+        lens = self.lens
+        #lens.set_fov(lens.get_fov() * (1.0 + amount * 0.1))
+        self.camera.set_pos(self.camera.get_pos() * (1.0 + amount * 0.1))
 
     def on_click(self):
         if self.mode == 'normal':

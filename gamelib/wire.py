@@ -8,7 +8,7 @@ from . import constants
 class PowerWire(object):
     drawer = core.LineSegs()
     #drawer.set_color((0.05, 0.05, 0.05, 1))
-    drawer.set_thickness(4)
+    drawer.set_thickness(2)
 
     sag = 0.25
     for x, z in (0, 1), (-0.1, 0.9), (0.1, 0.9), (-0.15, 0.8), (0.15, 0.9), (-0.1, 0.7), (0.1, 0.7):
@@ -26,6 +26,8 @@ class PowerWire(object):
         self.world = world
         self.origin = origin
         self.target = target
+
+        self.heat = 0
 
         # If placed is false, then self.target does not know about self yet.
         self.placed = False
@@ -48,7 +50,10 @@ class PowerWire(object):
             self.debug_label.node().set_text("0 A")
 
     def __repr__(self):
-        return "{!r}--{!r}".format(self.origin, self.target)
+        r = "{!r}--{!r}".format(self.origin, self.target)
+        if self.heat > 0.0:
+            r += " (HOT:{:.1f})".format(self.heat)
+        return r
 
     @property
     def vector(self):
@@ -119,6 +124,10 @@ class PowerWire(object):
         if constants.show_debug_labels:
             self.debug_label.remove_node()
 
+    @property
+    def overheated(self):
+        return self.heat >= constants.max_wire_heat
+
     def on_current_change(self, current):
         """Called to process an update in current flowing through."""
 
@@ -127,18 +136,21 @@ class PowerWire(object):
         if constants.show_debug_labels:
             self.debug_label.node().set_text("{:.1f} W".format(power))
 
-        if power > 3:
-            print("{} power exceeds {}, destroying".format(self, power))
-            self.destroy()
-        elif power > 2:
+        if power > 2:
+            # Start overheating.
+            self.heat += min((power - 2), 1) * globalClock.dt
             self.path.set_color_scale((1, 3 - power, 0, 1))
         elif power > 1:
+            # Cool down.
+            self.heat = max(self.heat - globalClock.dt, 0)
             self.path.set_color_scale((power - 1, 1, 0, 1))
         elif power > 0:
+            # Cool down faster.
+            self.heat = max(self.heat - 2 * globalClock.dt, 0)
             self.path.set_color_scale((0, power, 0, 1))
         else:
+            self.heat = 0
             self.path.set_color_scale((0.05, 0.05, 0.05, 1))
-
 
     def on_update(self):
         """Called when position information of neighbours changes."""

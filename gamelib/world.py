@@ -1,9 +1,10 @@
 from panda3d import core
 
-from . import constructs
+from . import constructs, constants
 
 import math
 import numpy
+import random
 
 
 class World(object):
@@ -24,31 +25,75 @@ class World(object):
 
         self.sun = core.PointLight("sun")
         self.sun.color = (0.5, 1, 1, 1)
-        self.sun.color = self.sun.color * 300
+        self.sun.color = self.sun.color * 10000
         self.sun.attenuation = (1, 0, 1)
         self.sun_path = self.root.attach_new_node(self.sun)
-        self.sun_path.set_pos(20, -10, 3)
+        self.sun_path.set_pos(15, -8, 5)
+        self.sun_path.set_pos(self.sun_path.get_pos() * 8)
         self.sun_path.reparent_to(self.root)
         self.root.set_light(self.sun_path)
 
         self.moon = core.PointLight("sun")
         self.moon.color = (1, 0.5, 0.5, 1)
-        self.moon.color = self.moon.color * 300
+        self.moon.color = self.moon.color * 10000
         self.moon.attenuation = (1, 0, 1)
         self.moon_path = self.root.attach_new_node(self.moon)
-        self.moon_path.set_pos(-20, 10, 3)
+        self.moon_path.set_pos(-20, 10, 6)
+        self.moon_path.set_pos(self.moon_path.get_pos() * 8)
         self.moon_path.reparent_to(self.root)
         self.root.set_light(self.moon_path)
+
+        #self.sun = core.DirectionalLight("sun")
+        #self.sun.direction = (1, -1, -0.5)
+        #self.sun.color = (0.5, 1, 1, 1)
+        ##self.sun.color = self.sun.color * 300
+        #self.sun_path = self.root.attach_new_node(self.sun)
+        #self.sun_path.set_pos(20, -10, 3)
+        #self.sun_path.reparent_to(self.root)
+        #self.root.set_light(self.sun_path)
+
+        #self.moon = core.DirectionalLight("sun")
+        #self.moon.direction = (-0.5, 1.5, -0.4)
+        #self.moon.color = (1, 0.5, 0.5, 1)
+        ##self.moon.color = self.moon.color * 300
+        #self.moon_path = self.root.attach_new_node(self.moon)
+        #self.moon_path.set_pos(-20, 10, 3)
+        #self.moon_path.reparent_to(self.root)
+        #self.root.set_light(self.moon_path)
 
         self.towns = []
         self.pylons = set()
 
-        self.add_town((0, -2), "Oldtown")
-        self.add_town((2, 3), "Newville")
-        self.towns[0].on_power_on()
+        self.grid = numpy.zeros((8, 8), dtype=int)
+
+        for i in range(10):
+            self.sprout_town()
 
         self.gen = constructs.Generator(self, (-4, 3), "Nuclear")
         self.gen.placed = True
+
+        #taskMgr.do_method_later(2.0, self.sprout_town, "sprout")
+
+        # Draw grid?
+        drawer = core.LineSegs()
+        drawer.set_color((0.05, 0.05, 0.05, 1))
+        drawer.set_thickness(1)
+
+        min_x = self.grid.shape[0] * -3
+        max_x = self.grid.shape[0] * 3
+        min_y = self.grid.shape[1] * -3
+        max_y = self.grid.shape[1] * 3
+
+        for x in range(min_x, max_x):
+            drawer.move_to((x, min_y, 0.001))
+            drawer.draw_to((x, max_y, 0.001))
+
+        for y in range(min_y, max_y):
+            drawer.move_to((min_x, y, 0.001))
+            drawer.draw_to((max_x, y, 0.001))
+
+        debug_grid = self.root.attach_new_node(drawer.create(False))
+        debug_grid.set_light_off(1)
 
     def construct_pylon(self):
         """Call this to construct additional pylons."""
@@ -56,6 +101,25 @@ class World(object):
         pylon = constructs.Pylon(self, (0, 0), "Pylon")
         self.pylons.add(pylon)
         return pylon
+
+    def sprout_town(self, task=None):
+        x = random.randint(0, self.grid.shape[0] - 1)
+        y = random.randint(0, self.grid.shape[1] - 1)
+        while self.grid[x][y] != 0:
+            x = random.randint(0, self.grid.shape[0] - 1)
+            y = random.randint(0, self.grid.shape[1] - 1)
+
+        self.grid[x][y] = 1
+
+        x -= self.grid.shape[0] / 2
+        y -= self.grid.shape[1] / 2
+
+        town = constructs.Town(self, (x * constants.town_spacing, y * constants.town_spacing), "City")
+        town.placed = True
+        self.towns.append(town)
+
+        if task is not None:
+            return task.again
 
     def add_town(self, pos, name):
         town = constructs.Town(self, pos, name)
@@ -81,9 +145,20 @@ class World(object):
 
         return closest
 
-    def calc_power(self, a):
+    def calc_power(self, start):
+        """Calculates the voltages at each node."""
+
         # Gather all nodes connected
-        nodes = self.find_nodes(a)
+        nodes = self.find_nodes(start)
+
+        # Other pylons are disconnected.
+        for node in self.pylons - nodes:
+            node.on_disconnected()
+
+        # So are towns that can't be reached by the generator.
+        for town in self.towns:
+            if town not in nodes:
+                town.on_disconnected()
 
         # Prune nodes with only one connection, unless they provide or consume
         # power.
@@ -94,9 +169,12 @@ class World(object):
                 if isinstance(node, constructs.Pylon):
                     if len(set(node.neighbours) & nodes) < 2:
                         nodes.discard(node)
+                        node.on_disconnected()
                         discarded += 1
 
         if len(nodes) <= 1:
+            for node in nodes:
+                node.on_disconnected()
             return
 
         # Now create a linear system for Modified Nodal Analysis.
@@ -145,16 +223,27 @@ class World(object):
             # Shouldn't happen, but better than nothing?
             results = numpy.linalg.lstsq(matrix, ords)[0]
 
+        # Determine the current through each wire based on the voltages.
+        hot_wires = []
         for node, result in zip(nodes, results):
             for other, wire in list(node.connections.items()):
                 if wire.placed and other in nodes:
-                    current = abs(result - results[nodes.index(other)])
+                    # Calc current from voltage differential and resistance.
+                    current = abs(result - results[nodes.index(other)]) / wire.resistance
                 else:
                     current = 0
 
                 wire.on_current_change(current)
+                if wire.overheated:
+                    hot_wires.append(wire)
 
             node.on_voltage_change(result)
+
+        # Remove the hottest wire.
+        if hot_wires:
+            hot_wires.sort(key=lambda wire:-wire.heat)
+            print("Removing overheated wire {}".format(hot_wires[0]))
+            hot_wires[0].destroy()
 
     def find_nodes(self, start, visited=frozenset()):
         nodes = set(visited)

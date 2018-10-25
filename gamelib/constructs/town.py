@@ -1,6 +1,7 @@
 from panda3d import core
 
 from ..construct import Construct
+from .. import constants
 
 import random
 import math
@@ -41,7 +42,7 @@ class Town(Construct):
         self.city = self.root.attach_new_node("city")
         self._rebuild_city()
 
-        self.on_power_off()
+        self.power_off()
 
     @property
     def resistance(self):
@@ -55,13 +56,25 @@ class Town(Construct):
         power = self.size * 10
         return 230 / self.resistance
 
-    def on_power_on(self):
+    def power_on(self):
         self.powered = True
         self.window_mat.emission = self.window_emit
 
-    def on_power_off(self):
+    def power_off(self):
         self.powered = False
         self.window_mat.emission = (0, 0, 0, 1)
+
+    def on_voltage_change(self, voltage):
+        if not self.powered:
+            self.power_on()
+
+        Construct.on_voltage_change(self, voltage)
+
+    def on_disconnected(self):
+        if self.powered:
+            self.power_off()
+
+        Construct.on_disconnected(self)
 
     def _update_label(self):
         self.label.node().set_text("{}: {:.0f} MW".format(self.name, self.size))
@@ -87,6 +100,8 @@ class Town(Construct):
     def grow(self, dt):
         if self.powered:
             self.size += dt
+        else:
+            self.size = max(1, self.size - dt * constants.town_shrink_rate)
 
         coeff = 400
         growth = 4 - (coeff / (self.size + (coeff / 4)))

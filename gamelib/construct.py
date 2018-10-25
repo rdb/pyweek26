@@ -28,6 +28,7 @@ class Construct(object):
         self.label.set_light_off(1)
         self.label.set_color_scale_off(1)
         self.label.set_depth_write(False)
+        self.label.set_h(20)
 
         cm = core.CardMaker("arrow")
         cm.set_frame(-1, 1, -1, 1)
@@ -99,8 +100,16 @@ class Construct(object):
         self.root.clear_color_scale()
 
     def on_voltage_change(self, voltage):
+        """Called with the voltage of the node if it's connected."""
+
         if constants.show_debug_labels:
             self.debug_label.node().set_text("{:.1f} V".format(voltage))
+
+    def on_disconnected(self):
+        """Called instead of on_voltage_change if it's not connected."""
+
+        if constants.show_debug_labels:
+            self.debug_label.node().set_text("X")
 
     def on_update(self):
         """Updates state based on position information of neighbours."""
