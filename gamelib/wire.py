@@ -6,20 +6,6 @@ from . import constants
 
 
 class PowerWire(object):
-    drawer = core.LineSegs()
-    #drawer.set_color((0.05, 0.05, 0.05, 1))
-    drawer.set_thickness(2)
-
-    sag = 0.25
-    for x, z in (0, 1), (-0.1, 0.9), (0.1, 0.9), (-0.15, 0.8), (0.15, 0.9), (-0.1, 0.7), (0.1, 0.7):
-        drawer.move_to((x, 0, z))
-        for y in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
-            drawer.draw_to((x, y, z - math.sin(y * math.pi) * sag))
-        drawer.draw_to((x, 1, z))
-
-    wires = drawer.create(False)
-    del drawer
-
     resistance = 1.0
 
     def __init__(self, world, origin, target):
@@ -32,7 +18,7 @@ class PowerWire(object):
         # If placed is false, then self.target does not know about self yet.
         self.placed = False
 
-        self.path = self.world.root.attach_new_node(copy(self.wires))
+        self.path = self.world.root.attach_new_node(core.GeomNode("wires"))
         self.path.set_light_off(1)
         self.path.set_color_scale((0.05, 0.05, 0.05, 1))
 
@@ -55,9 +41,44 @@ class PowerWire(object):
             r += " (HOT:{:.1f})".format(self.heat)
         return r
 
+    def _draw_lines(self):
+        self.path.node().remove_all_geoms()
+
+        drawer = core.LineSegs()
+        #drawer.set_color((0.05, 0.05, 0.05, 1))
+        drawer.set_thickness(constants.wire_thickness)
+
+        origin_attachments = self.origin.attachments
+        target_attachments = self.target.attachments
+
+        # Don't cross the lines.
+        if origin_attachments[0].get_quat(self.path).get_forward().dot(target_attachments[0].get_quat(self.path).get_forward()) < 0:
+            target_attachments = tuple(reversed(target_attachments))
+
+        sag = self.origin.allow_wire_sag and self.target.allow_wire_sag
+
+        for i in range(max(len(origin_attachments), len(target_attachments))):
+            from_point = origin_attachments[i % len(origin_attachments)].get_pos(self.path)
+            to_point = target_attachments[i % len(target_attachments)].get_pos(self.path)
+
+            # Interpolate.
+            drawer.move_to(from_point)
+            for t in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
+                point = from_point * (1 - t) + to_point * t
+                if sag:
+                    point.z -= math.sin(t * math.pi) * constants.wire_sag
+                drawer.draw_to(point)
+            drawer.draw_to(to_point)
+
+        wires = drawer.create(self.path.node())
+
     @property
     def vector(self):
         return self.target.pos - self.origin.pos
+
+    @property
+    def angle(self):
+        return -self.vector.signed_angle_deg((0, 1))
 
     def try_set_target(self, to):
         """Try changing the target of the wire, for use during placement."""
@@ -139,15 +160,18 @@ class PowerWire(object):
         if power > 2:
             # Start overheating.
             self.heat += min((power - 2), 1) * globalClock.dt
-            self.path.set_color_scale((1, 3 - power, 0, 1))
+            self.path.set_color_scale((1, 0, 0, 1))
+            #self.path.set_color_scale((1, 3 - power, 0, 1))
         elif power > 1:
             # Cool down.
             self.heat = max(self.heat - globalClock.dt, 0)
-            self.path.set_color_scale((power - 1, 1, 0, 1))
+            self.path.set_color_scale((1, 2 - power, 2 - power, 1))
+            #self.path.set_color_scale((power - 1, 1, 0, 1))
         elif power > 0:
             # Cool down faster.
             self.heat = max(self.heat - 2 * globalClock.dt, 0)
-            self.path.set_color_scale((0, power, 0, 1))
+            self.path.set_color_scale((1, 1, 1, 1))
+            #self.path.set_color_scale((0, power, 0, 1))
         else:
             self.heat = 0
             self.path.set_color_scale((0.05, 0.05, 0.05, 1))
@@ -155,10 +179,12 @@ class PowerWire(object):
     def on_update(self):
         """Called when position information of neighbours changes."""
 
-        self.path.set_pos(self.origin.x, self.origin.y, 0)
-        self.path.look_at(self.target.x, self.target.y, 0)
-        self.path.set_sy((self.target.root.get_pos() - self.origin.root.get_pos()).length())
+        #self.path.set_pos(self.origin.x, self.origin.y, 0)
+        #self.path.look_at(self.target.x, self.target.y, 0)
+        #self.path.set_sy((self.target.root.get_pos() - self.origin.root.get_pos()).length())
 
         if constants.show_debug_labels:
             pos = (self.origin.pos + self.target.pos) * 0.5
             self.debug_label.set_pos(pos[0] + -0.5, pos[1] + -1, 1.5)
+
+        self._draw_lines()

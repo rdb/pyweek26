@@ -17,14 +17,17 @@ class World(object):
         self.plane_model.look_at(0, 0, -1)
 
         mat = core.Material()
-        mat.diffuse = (1, 1, 1, 1)
+        #mat.diffuse = (218.0/255.0, 234.0/255.0, 182.0/255.0, 1)
+        mat.diffuse = (181.0/255.0, 214.0/255.0, 111.0/255.0, 1)
+        #mat.diffuse = (192.0/255.0, 239.0/255.0, 91.0/255.0, 1)
+        mat.diffuse = (2, 2, 2, 1)
         mat.ambient = (1, 1, 1, 1)
         self.plane_model.set_material(mat)
 
         self.plane = core.Plane(0, 0, 1, 0)
 
         self.sun = core.PointLight("sun")
-        self.sun.color = (0.5, 1, 1, 1)
+        self.sun.color = (0.9, 1, 0.8, 1)
         self.sun.color = self.sun.color * 10000
         self.sun.attenuation = (1, 0, 1)
         self.sun_path = self.root.attach_new_node(self.sun)
@@ -34,7 +37,8 @@ class World(object):
         self.root.set_light(self.sun_path)
 
         self.moon = core.PointLight("sun")
-        self.moon.color = (1, 0.5, 0.5, 1)
+        self.moon.color = (243.0/255.0, 247.0/255.0, 173.0/255.0, 1)
+        #self.moon.color = (1, 0.5, 0.5, 1)
         self.moon.color = self.moon.color * 10000
         self.moon.attenuation = (1, 0, 1)
         self.moon_path = self.root.attach_new_node(self.moon)
@@ -64,19 +68,36 @@ class World(object):
         self.towns = []
         self.pylons = set()
 
+        # Grid prevents building towns at already occupied places.
         self.grid = numpy.zeros((8, 8), dtype=int)
 
-        for i in range(10):
-            self.sprout_town()
-
-        self.gen = constructs.Generator(self, (-4, 3), "Nuclear")
+        # Build generator.  Block off everything in the immediate vicinity.
+        x = 3
+        y = 4
+        self.grid[x][y] = 1
+        self.grid[x+1][y] = 1
+        self.grid[x-1][y] = 1
+        self.grid[x][y-1] = 1
+        self.grid[x+1][y-1] = 1
+        self.grid[x-1][y-1] = 1
+        self.grid[x][y+1] = 1
+        self.grid[x+1][y+1] = 1
+        self.grid[x-1][y+1] = 1
+        x -= self.grid.shape[0] / 2
+        y -= self.grid.shape[1] / 2
+        self.gen = constructs.Generator(self, (x * constants.town_spacing, y * constants.town_spacing), "Power Plant")
         self.gen.placed = True
 
-        #taskMgr.do_method_later(2.0, self.sprout_town, "sprout")
+        # Build one town at a fixed location.
+        self.sprout_town(grid_pos=(5, 4), seed=5)
+
+        # And one at an arbitrary, but close spot.
+        second_town_spots = [(2, 3), (4, 5), (2, 5), (5, 3), (3, 2)]
+        self.sprout_town(grid_pos=random.choice(second_town_spots))
 
         # Draw grid?
         drawer = core.LineSegs()
-        drawer.set_color((0.05, 0.05, 0.05, 1))
+        #drawer.set_color((0.05, 0.05, 0.05, 1))
         drawer.set_thickness(1)
 
         min_x = self.grid.shape[0] * -3
@@ -94,6 +115,8 @@ class World(object):
 
         debug_grid = self.root.attach_new_node(drawer.create(False))
         debug_grid.set_light_off(1)
+        debug_grid.set_color_scale((0.35, 0.35, 0.35, 1))
+        debug_grid.show()
 
     def construct_pylon(self):
         """Call this to construct additional pylons."""
@@ -102,24 +125,24 @@ class World(object):
         self.pylons.add(pylon)
         return pylon
 
-    def sprout_town(self, task=None):
-        x = random.randint(0, self.grid.shape[0] - 1)
-        y = random.randint(0, self.grid.shape[1] - 1)
-        while self.grid[x][y] != 0:
+    def sprout_town(self, grid_pos=None, seed=None):
+        if grid_pos is not None:
+            x, y = grid_pos
+        else:
             x = random.randint(0, self.grid.shape[0] - 1)
             y = random.randint(0, self.grid.shape[1] - 1)
+            while self.grid[x][y] != 0:
+                x = random.randint(0, self.grid.shape[0] - 1)
+                y = random.randint(0, self.grid.shape[1] - 1)
 
         self.grid[x][y] = 1
 
         x -= self.grid.shape[0] / 2
         y -= self.grid.shape[1] / 2
 
-        town = constructs.Town(self, (x * constants.town_spacing, y * constants.town_spacing), "City")
+        town = constructs.Town(self, (x * constants.town_spacing, y * constants.town_spacing), "City", seed=seed)
         town.placed = True
         self.towns.append(town)
-
-        if task is not None:
-            return task.again
 
     def add_town(self, pos, name):
         town = constructs.Town(self, pos, name)
@@ -138,8 +161,8 @@ class World(object):
             if not construct.placed:
                 continue
 
-            dist_sq = math.sqrt((construct.x - x) ** 2 + (construct.y - y) ** 2)
-            if dist_sq < closest_dist_sq:
+            dist_sq = (construct.x - x) ** 2 + (construct.y - y) ** 2
+            if dist_sq < closest_dist_sq and dist_sq < (construct.selection_distance ** 2):
                 closest = construct
                 closest_dist_sq = dist_sq
 

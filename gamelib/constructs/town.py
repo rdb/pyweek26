@@ -9,7 +9,7 @@ import numpy
 
 
 class Town(Construct):
-    def __init__(self, world, pos, name):
+    def __init__(self, world, pos, name, seed=None):
         Construct.__init__(self, world, pos, name)
         self.size = 1
         self.powered = False
@@ -37,10 +37,14 @@ class Town(Construct):
         self.window_emit = core.LVecBase4(self.window_mat.emission)
 
         # Create a random seed so this city will be unique.
-        self.seed = random.random()
+        if seed is None:
+            seed = random.random()
+        self.seed = seed
 
         self.city = self.root.attach_new_node("city")
         self._rebuild_city()
+
+        self.attachments.append(self.city)
 
         self.power_off()
 
@@ -57,12 +61,18 @@ class Town(Construct):
         return 230 / self.resistance
 
     def power_on(self):
+        # Turn on lights
         self.powered = True
         self.window_mat.emission = self.window_emit
 
+        self._update_label()
+
     def power_off(self):
+        # Turn off lights
         self.powered = False
         self.window_mat.emission = (0, 0, 0, 1)
+
+        self._update_label()
 
     def on_voltage_change(self, voltage):
         if not self.powered:
@@ -77,7 +87,12 @@ class Town(Construct):
         Construct.on_disconnected(self)
 
     def _update_label(self):
-        self.label.node().set_text("{}: {:.0f} MW".format(self.name, self.size))
+        if self.powered:
+            self.label.node().set_text("{}\n{:.0f} MW".format(self.name, self.size))
+            self.label_important = False
+        else:
+            self.label.node().set_text("This city is not\ngetting power!")
+            self.label_important = True
 
     def _rebuild_city(self):
         self.city.children.detach()

@@ -37,15 +37,13 @@ class Game(ShowBase):
 
         self.mode = 'normal'
 
-        self.cursor = loader.loadModel('jack')
-        self.cursor.reparent_to(render)
-        self.cursor.hide()
-
         self.accept('mouse1', self.on_click)
         self.accept('mouse3', self.cancel_placement)
-        self.accept('s', self.screenshot)
+        self.accept('shift-s', self.screenshot)
         self.accept('escape', self.cancel_placement)
-        self.accept('h', self.highlight_all)
+        self.accept('shift-h', self.highlight_all)
+        self.accept('shift-l', self.render.ls)
+        self.accept('shift-p', self.create_stats)
         self.accept('wheel_up', self.on_zoom, [1.0])
         self.accept('wheel_down', self.on_zoom, [-1.0])
 
@@ -81,9 +79,8 @@ class Game(ShowBase):
                 self.world.root.get_relative_point(self.camera, near),
                 self.world.root.get_relative_point(self.camera, far)):
 
-                construct = self.world.pick_closest_construct(pos3d[0], pos3d[1], constants.selection_distance)
-                self.cursor.set_pos(pos3d)
-
+                # Which construct are we hovering over?
+                construct = self.world.pick_closest_construct(pos3d[0], pos3d[1])
                 if construct is self.pylon:
                     construct = None
 
@@ -115,11 +112,12 @@ class Game(ShowBase):
             if self.highlighted:
                 self.pylon = self.world.construct_pylon()
                 self.placing_wire = self.highlighted.connect_to(self.pylon)
+                self.highlighted.unhighlight()
                 self.highlighted = None
                 self.mode = 'placing'
 
         elif self.mode == 'placing':
-            construct = self.world.pick_closest_construct(self.pylon.x, self.pylon.y, constants.selection_distance)
+            construct = self.world.pick_closest_construct(self.pylon.x, self.pylon.y)
             if construct and construct is not self.placing_wire.target:
                 print("Cannot place here!")
                 return
