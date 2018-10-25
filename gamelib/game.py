@@ -4,6 +4,8 @@ from panda3d import core
 from .world import World
 from . import constants
 
+import math
+
 
 class Game(ShowBase):
     def __init__(self):
@@ -21,7 +23,8 @@ class Game(ShowBase):
         # Set up camera
         self.disable_mouse()
         self.pivot = self.world.root.attach_new_node("pivot")
-        self.camera.reparent_to(self.pivot)
+        self.camera_target = self.pivot.attach_new_node("target")
+        self.camera.reparent_to(self.camera_target)
         self.camera.set_pos(0, -15, 15)
         self.camera.look_at(0, 0, 0)
 
@@ -60,12 +63,20 @@ class Game(ShowBase):
         hor = mw.is_button_down('arrow_right') - mw.is_button_down('arrow_left')
         if hor != 0:
             speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
-            self.camera.set_x(self.camera.get_x() + hor * speed * self.clock.dt)
+            movement = hor * speed * self.clock.dt
+            abs_pos = self.world.root.get_relative_point(self.camera_target, (movement, 0, 0))
+            abs_pos.x = min(max(abs_pos.x, -20), 20)
+            abs_pos.y = min(max(abs_pos.y, -20), 20)
+            self.camera_target.set_pos(self.world.root, abs_pos)
 
         ver = mw.is_button_down('arrow_up') - mw.is_button_down('arrow_down')
         if ver != 0:
             speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
-            self.camera.set_y(self.camera.get_y() + ver * speed * self.clock.dt)
+            movement = ver * speed * self.clock.dt
+            abs_pos = self.world.root.get_relative_point(self.camera_target, (0, movement, 0))
+            abs_pos.x = min(max(abs_pos.x, -20), 20)
+            abs_pos.y = min(max(abs_pos.y, -20), 20)
+            self.camera_target.set_pos(self.world.root, abs_pos)
 
         # Mouse controls
         construct = None
@@ -104,8 +115,14 @@ class Game(ShowBase):
 
     def on_zoom(self, amount):
         lens = self.lens
-        #lens.set_fov(lens.get_fov() * (1.0 + amount * 0.1))
         self.camera.set_pos(self.camera.get_pos() * (1.0 + amount * 0.1))
+
+        dist_sq = self.camera.get_pos().length_squared()
+        if dist_sq > constants.camera_max_zoom ** 2:
+            self.camera.set_pos(self.camera.get_pos() * constants.camera_max_zoom / math.sqrt(dist_sq))
+
+        elif dist_sq < constants.camera_min_zoom ** 2:
+            self.camera.set_pos(self.camera.get_pos() * constants.camera_min_zoom / math.sqrt(dist_sq))
 
     def on_click(self):
         if self.mode == 'normal':

@@ -1,4 +1,6 @@
 camera_speed = 3.0
+camera_min_zoom = 10.0
+camera_max_zoom = 50.0
 max_pylon_distance = 4
 max_pylon_distance_sq = max_pylon_distance ** 2
 max_wire_heat = 6.0
