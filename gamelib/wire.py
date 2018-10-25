@@ -94,7 +94,7 @@ class PowerWire(object):
         if to in self.origin.connections and self.origin.connections[to].placed:
             return False
 
-        if (self.origin.pos - to.pos).length_squared() > constants.max_pylon_distance_sq:
+        if (self.origin.pos - to.pos).length_squared() > (constants.max_pylon_distance + to.selection_distance) ** 2:
             return False
 
         self.set_target(to)
