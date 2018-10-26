@@ -64,6 +64,7 @@ class Town(Construct):
         # Turn on lights
         self.powered = True
         self.window_mat.emission = self.window_emit
+        self.city.set_color_scale((1.5, 1.5, 1.5, 1))
 
         self._update_label()
 
@@ -71,6 +72,7 @@ class Town(Construct):
         # Turn off lights
         self.powered = False
         self.window_mat.emission = (0, 0, 0, 1)
+        self.city.set_color_scale((1, 1, 1, 1))
 
         self._update_label()
 
