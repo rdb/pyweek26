@@ -39,6 +39,7 @@ class Game(ShowBase):
 
 
         self.mode = 'normal'
+        self.next_unpowered_index = 0
 
         self.accept('mouse1', self.on_click)
         self.accept('mouse3', self.cancel_placement)
@@ -47,6 +48,7 @@ class Game(ShowBase):
         self.accept('shift-h', self.highlight_all)
         self.accept('shift-l', self.render.ls)
         self.accept('shift-p', self.create_stats)
+        self.accept('tab', self.cycle_unpowered_town)
         self.accept('wheel_up', self.on_zoom, [1.0])
         self.accept('wheel_down', self.on_zoom, [-1.0])
 
@@ -56,6 +58,11 @@ class Game(ShowBase):
 
     def __task(self, task):
         self.world.step(self.clock.dt)
+
+        if all(town.powered for town in self.world.towns):
+            self.unpowered_button.hide()
+        else:
+            self.unpowered_button.show()
 
         mw = self.mouseWatcherNode
 
@@ -151,6 +158,19 @@ class Game(ShowBase):
                 self.placing_wire = None
                 self.pylon = None
                 self.mode = 'normal'
+
+    def cycle_unpowered_town(self):
+        if all(town.powered for town in self.world.towns):
+            return
+
+        while True:
+            self.next_unpowered_index = self.next_unpowered_index % len(self.world.towns)
+
+            town = self.world.towns[self.next_unpowered_index]
+            self.next_unpowered_index += 1
+            if not town.powered:
+                self.camera_target.posInterval(constants.cycle_unpowered_town_time, town.root.get_pos(self.pivot), blendType='easeInOut', bakeInStart=True).start()
+                return
 
     def highlight_all(self):
         for thing in [self.world.gen] + self.world.towns:
