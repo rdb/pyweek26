@@ -8,7 +8,28 @@ import math
 import numpy
 
 
+category_names = [
+    "dwelling",
+    "hamlet",
+    "village",
+    "village",
+    "village",
+    # 50 MW
+    "town", "town", "town", "town", "town",
+    # 100 MW
+    "city", "city", "city", "city", "city",
+    "city", "city", "city", "city", "city",
+    "city", "city", "city", "city", "city",
+    # 250 MW
+    "metropolis",
+]
+
+
 class Town(Construct):
+
+    # We make the last connection point to a town inherently stronger.
+    wire_conductance = 3
+
     def __init__(self, world, pos, name, seed=None):
         Construct.__init__(self, world, pos, name)
         self.size = 1
@@ -90,11 +111,10 @@ class Town(Construct):
 
     def _update_label(self):
         if self.powered:
-            self.label.node().set_text("{}\n{:.0f} MW".format(self.name, self.size))
-            self.label_important = False
+            name = self.name[0].upper() + self.name[1:]
+            self.set_label(text="{}\n{:.0f} MW".format(name, self.size))
         else:
-            self.label.node().set_text("This city is not\ngetting power!")
-            self.label_important = True
+            self.set_label(text="This {} is not\ngetting power!".format(self.name), important=True)
 
     def _rebuild_city(self):
         self.city.children.detach()
@@ -120,8 +140,8 @@ class Town(Construct):
         else:
             self.size = max(1, self.size - dt * constants.town_shrink_rate)
 
-        coeff = 400
-        growth = 4 - (coeff / (self.size + (coeff / 4)))
+        #growth = 4.5 - (500 / (self.size + (500 / 4.5)))
+        growth = 8 - (1000 / (self.size * 0.4 + (1000 / 8)))
 
         # Compute new tiles.
         new_grid = numpy.zeros((5, 5), dtype=int)
@@ -145,5 +165,10 @@ class Town(Construct):
         if (new_grid != self.grid).any():
             self.grid = new_grid
             self._rebuild_city()
+
+        # Make up a nice name for it... calling a single building a "city"
+        # seems so silly.
+        category = min(int(self.size // 10), len(category_names) - 1)
+        self.name = category_names[category]
 
         self._update_label()

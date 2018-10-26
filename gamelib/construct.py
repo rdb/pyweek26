@@ -9,6 +9,9 @@ class Construct(object):
 
     allow_wire_sag = True
     selection_distance = 2
+    upgradable = False
+    erasable = False
+    wire_conductance = 1
 
     def __init__(self, world, pos, name):
         self.world = world
@@ -18,6 +21,7 @@ class Construct(object):
 
         # Starts out as a ghost.
         self.placed = False
+        self.upgraded = False
 
         self.root = world.root.attach_new_node(name)
         self.root.set_pos(pos[0], pos[1], 0)
@@ -38,8 +42,10 @@ class Construct(object):
         self.label.hide()
 
         # Set to show label even if not highlighted.
+        self.__label_text = ''
         self.__label_important = False
-        self.highlighted = False
+        self.__label_effective_important = False
+        self.highlight_mode = None
 
         cm = core.CardMaker("arrow")
         cm.set_frame(-1, 1, -1, 1)
@@ -88,6 +94,9 @@ class Construct(object):
         assert not self.connections
         self.root.remove_node()
 
+    def finish_placement(self):
+        self.placed = True
+
     def connect_to(self, other):
         if other in self.connections:
             return self.connections[other]
@@ -109,20 +118,24 @@ class Construct(object):
                 wire.origin.on_update()
         self.on_update()
 
-    @property
-    def label_important(self):
-        return self.__label_important
+    def set_label(self, text, important=False):
+        self.__label_text = text
+        self.__label_important = important
 
-    @label_important.setter
-    def label_important(self, setting):
-        if setting != self.__label_important:
-            self.__label_important = setting
-            if setting or self.highlighted:
+        if self.highlight_mode not in ('connect', 'erase', 'placing', 'upgrade', 'too-far', 'already-connected', 'beginning'):
+            self._do_set_label(text, important)
+
+    def _do_set_label(self, text, important):
+        self.label.node().set_text(text)
+
+        if important is not self.__label_effective_important:
+            self.__label_effective_important = important
+            if important or self.highlight_mode is not None:
                 self.label.show()
             else:
                 self.label.hide()
 
-            if setting:
+            if important:
                 self.label_bob.loop()
                 self.label.node().set_card_color(constants.important_label_color)
                 self.arrow.set_color(constants.important_label_color)
@@ -131,15 +144,65 @@ class Construct(object):
                 self.label.node().set_card_color(constants.normal_label_color)
                 self.arrow.set_color(constants.normal_label_color)
 
-    def highlight(self):
-        self.highlighted = True
+    @property
+    def highlighted(self):
+        return self.highlight_mode is not None
+
+    def highlight(self, mode):
+        if self.highlight_mode == mode:
+            return
+
         self.label.show()
+        self.highlight_mode = mode
         self.root.set_color_scale((2, 2, 2, 1))
 
+        if mode == 'connect':
+            effective_text = 'Click to connect\nthis {}'.format(self.name)
+            effective_important = False
+        elif mode == 'erase':
+            if self.erasable:
+                effective_text = 'Click to erase\nthis {}'.format(self.name)
+                effective_important = False
+            else:
+                effective_text = "Only pylons can\nbe erased!"
+                effective_important = True
+        elif mode == 'placing':
+            effective_text = 'Click to place a\npylon here'
+            effective_important = False
+        elif mode == 'upgrade':
+            if not self.upgradable:
+                effective_text = "Only pylons can\nbe upgraded!"
+                effective_important = True
+            elif self.upgraded:
+                effective_text = "Already\nupgraded!"
+                effective_important = True
+            else:
+                effective_text = "Click to upgrade\nthis {}".format(self.name)
+                effective_important = False
+        elif mode == 'too-far':
+            effective_text = "Too far! Build\npylons closer."
+            effective_important = True
+        elif mode == 'already-connected':
+            effective_text = "Already\nconnected!"
+            effective_important = True
+        if mode == 'bad-terrain':
+            effective_text = "Cannot build\non bad terrain!"
+            effective_important = True
+        #elif mode == 'self-connect':
+        #    effective_text = "Cannot connect\nto itself!"
+        #    effective_important = True
+        else:
+            effective_text = self.__label_text
+            effective_important = self.__label_important
+
+        self._do_set_label(effective_text, important=effective_important)
+
     def unhighlight(self):
-        self.highlighted = False
+        self.highlight_mode = None
         if not self.__label_important:
             self.label.hide()
+        else:
+            self._do_set_label(self.__label_text, self.__label_important)
         self.root.clear_color_scale()
 
     def on_voltage_change(self, voltage):

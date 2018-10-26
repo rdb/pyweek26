@@ -71,10 +71,29 @@ class World(object):
         # Grid prevents building towns at already occupied places.
         self.grid = numpy.zeros((8, 8), dtype=int)
 
-        # Build generator.  Block off everything in the immediate vicinity.
+        # Build one town at a fixed location.
+        self.sprout_town(grid_pos=(5, 4), seed=5)
+
+        # And one at an arbitrary, but close spot.
+        second_town_spots = [(2, 3), (4, 5), (2, 5), (5, 3), (3, 2)]
+        self.sprout_town(grid_pos=random.choice(second_town_spots))
+
+        # Determine coordinates for generator and claim it.
         x = 3
         y = 4
         self.grid[x][y] = 1
+
+        # Oh, also spawn in some shrubberies, and litter them around the map.
+        for i in range(4):
+            self.sprout_shrubbery("trees.egg")
+        for i in range(4):
+            self.sprout_shrubbery("trees2.egg")
+        for i in range(4):
+            self.sprout_shrubbery("trees3.egg")
+        for i in range(4):
+            self.sprout_shrubbery("trees4.egg")
+
+        # Build generator.  Block off everything in the immediate vicinity.
         self.grid[x+1][y] = 1
         self.grid[x-1][y] = 1
         self.grid[x][y-1] = 1
@@ -85,15 +104,14 @@ class World(object):
         self.grid[x-1][y+1] = 1
         x -= self.grid.shape[0] / 2
         y -= self.grid.shape[1] / 2
-        self.gen = constructs.Generator(self, (x * constants.town_spacing, y * constants.town_spacing), "Power Plant")
+        self.gen = constructs.Generator(self, (x * constants.grid_spacing, y * constants.grid_spacing), "Power Plant")
         self.gen.placed = True
 
-        # Build one town at a fixed location.
-        self.sprout_town(grid_pos=(5, 4), seed=5)
-
-        # And one at an arbitrary, but close spot.
-        second_town_spots = [(2, 3), (4, 5), (2, 5), (5, 3), (3, 2)]
-        self.sprout_town(grid_pos=random.choice(second_town_spots))
+        # And some impassable terrain.
+        for i in range(3):
+            self.sprout_obstacle("hill.egg")
+        for i in range(3):
+            self.sprout_obstacle("hill2.egg")
 
         # Draw grid?
         drawer = core.LineSegs()
@@ -125,29 +143,79 @@ class World(object):
         self.pylons.add(pylon)
         return pylon
 
+    def find_free_grid_spot(self):
+        x = random.randint(0, self.grid.shape[0] - 1)
+        y = random.randint(0, self.grid.shape[1] - 1)
+        while self.grid[x][y] != 0:
+            x = random.randint(0, self.grid.shape[0] - 1)
+            y = random.randint(0, self.grid.shape[1] - 1)
+
+        return x, y
+
     def sprout_town(self, grid_pos=None, seed=None):
         if grid_pos is not None:
             x, y = grid_pos
         else:
-            x = random.randint(0, self.grid.shape[0] - 1)
-            y = random.randint(0, self.grid.shape[1] - 1)
-            while self.grid[x][y] != 0:
-                x = random.randint(0, self.grid.shape[0] - 1)
-                y = random.randint(0, self.grid.shape[1] - 1)
+            x, y = self.find_free_grid_spot()
 
         self.grid[x][y] = 1
 
         x -= self.grid.shape[0] / 2
         y -= self.grid.shape[1] / 2
 
-        town = constructs.Town(self, (x * constants.town_spacing, y * constants.town_spacing), "City", seed=seed)
+        town = constructs.Town(self, (x * constants.grid_spacing, y * constants.grid_spacing), "City", seed=seed)
         town.placed = True
         self.towns.append(town)
+
+    def sprout_shrubbery(self, model):
+        x, y = self.find_free_grid_spot()
+        self.grid[x][y] = 1
+
+        x -= self.grid.shape[0] / 2
+        y -= self.grid.shape[1] / 2
+
+        trees = loader.load_model(model)
+        trees.reparent_to(self.root)
+        trees.set_pos((x + (random.random() - 0.5) * 0.75) * constants.grid_spacing,
+                      (y + (random.random() - 0.5) * 0.75) * constants.grid_spacing, 0)
+        trees.set_h(random.random() * 360)
+
+    def sprout_obstacle(self, model):
+        x, y = self.find_free_grid_spot()
+        self.grid[x][y] = 2
+
+        x -= self.grid.shape[0] / 2
+        y -= self.grid.shape[1] / 2
+
+        obstacle = loader.load_model(model)
+        obstacle.reparent_to(self.root)
+        obstacle.set_pos((x + (random.random() - 0.5) * 0.25) * constants.grid_spacing,
+                         (y + (random.random() - 0.5) * 0.25) * constants.grid_spacing, 0)
+        obstacle.set_h(random.random() * 360)
+        obstacle.set_sz(random.random() + 0.5)
 
     def add_town(self, pos, name):
         town = constructs.Town(self, pos, name)
         town.placed = True
         self.towns.append(town)
+
+    def is_buildable_terrain(self, x, y):
+        """Returns false if the indicated grid cell is rough terrain."""
+
+        x /= constants.grid_spacing
+        y /= constants.grid_spacing
+
+        x += self.grid.shape[0] / 2
+        y += self.grid.shape[1] / 2
+
+        x = int(round(x))
+        y = int(round(y))
+
+        if x < 0 or y < 0 or x >= self.grid.shape[0] or y >= self.grid.shape[1]:
+            # Out of bounds
+            return False
+
+        return self.grid[int(round(x))][int(round(y))] < 2
 
     def pick_closest_construct(self, x, y, max_radius=None):
         """Returns the Construct that falls within the given radius of the given position."""
@@ -211,8 +279,9 @@ class World(object):
             for node2 in node.neighbours:
                 if node2 in nodes:
                     j = nodes.index(node2)
-                    row[i] += 1
-                    row[j] += -1
+                    conductance = 1 / node.connections[node2].resistance
+                    row[i] += conductance
+                    row[j] += -conductance
 
             if isinstance(node, constructs.Generator):
                 # Generator current is an unknown.

@@ -8,8 +8,6 @@ acosh_scale = math.acosh(2) * 2
 
 
 class PowerWire(object):
-    resistance = 1.0
-
     def __init__(self, world, origin, target):
         self.world = world
         self.origin = origin
@@ -22,7 +20,8 @@ class PowerWire(object):
 
         self.path = self.world.root.attach_new_node(core.GeomNode("wires"))
         self.path.set_light_off(1)
-        self.path.set_color_scale((0.05, 0.05, 0.05, 1))
+        self.path.set_color_scale((0.05, 0.05, 0.05, constants.ghost_alpha))
+        #self.path.set_transparency(core.TransparencyAttrib.M_alpha)
 
         if constants.show_debug_labels:
             debug_label_text = core.TextNode("debug_label")
@@ -43,6 +42,15 @@ class PowerWire(object):
             r += " (HOT:{:.1f})".format(self.heat)
         return r
 
+    @property
+    def resistance(self):
+        # 1 ohm normally, but 0.2 if target or origin is upgraded.
+        # If target and origin are both pylons, but only one are upgraded, the
+        # effective resistance is only 0.45.
+        if self.target and self.origin:
+            return (1.0 / (self.origin.wire_conductance + self.target.wire_conductance))
+        return 1.0
+
     def _draw_lines(self):
         self.path.node().remove_all_geoms()
 
@@ -59,9 +67,21 @@ class PowerWire(object):
 
         sag = self.origin.allow_wire_sag and self.target.allow_wire_sag
 
+        ti = 0
+        oi = 0
+        tstep = 1
+        ostep = 1
+
+        # Step through attachment list more slowly if one has more than the
+        # other.
+        if len(origin_attachments) > len(target_attachments):
+            tstep = len(target_attachments) / float(len(origin_attachments))
+        elif len(origin_attachments) < len(target_attachments):
+            ostep = len(origin_attachments) / float(len(target_attachments))
+
         for i in range(max(len(origin_attachments), len(target_attachments))):
-            from_point = origin_attachments[i % len(origin_attachments)].get_pos(self.path)
-            to_point = target_attachments[i % len(target_attachments)].get_pos(self.path)
+            from_point = origin_attachments[int(oi)].get_pos(self.path)
+            to_point = target_attachments[int(ti)].get_pos(self.path)
 
             # Interpolate.
             drawer.move_to(from_point)
@@ -71,6 +91,9 @@ class PowerWire(object):
                     point.z += constants.wire_sag * (math.cosh((t - 0.5) * acosh_scale) - 2)
                 drawer.draw_to(point)
             drawer.draw_to(to_point)
+
+            oi += ostep
+            ti += tstep
 
         wires = drawer.create(self.path.node())
 
@@ -131,7 +154,10 @@ class PowerWire(object):
         self.placed = True
 
         print("Finishing placement of {}".format(self))
-        self.target.placed = True
+        if not self.target.placed:
+            self.target.finish_placement()
+
+        self.path.set_color_scale((0.05, 0.05, 0.05, 1))
 
     def destroy(self):
         if self.origin.connections.get(self.target) is self:

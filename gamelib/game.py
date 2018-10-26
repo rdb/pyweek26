@@ -1,7 +1,10 @@
 from direct.showbase.ShowBase import ShowBase
+from direct.gui.DirectButton import DirectButton
+from direct.gui.OnscreenText import OnscreenText
 from panda3d import core
 
 from .world import World
+from .panel import Panel
 from . import constants
 
 import math
@@ -11,6 +14,12 @@ class Game(ShowBase):
     def __init__(self):
         core.load_prc_file("config.prc")
         ShowBase.__init__(self)
+
+        try:
+            bold_font = loader.load_font("data/font/Roboto-Bold.ttf")
+        except:
+            print("Could not load Roboto-Bold.ttf")
+            bold_font = None
 
         self.set_background_color((0.02, 0.01, 0.01, 1))
 
@@ -37,9 +46,18 @@ class Game(ShowBase):
         self.clock = core.ClockObject.get_global_clock()
         self.task_mgr.add(self.__task)
 
+        # Create UI
+        self.panel = Panel(self.a2dBottomLeft)
+        self.panel.add_button("1. Connect", icon=0xf5ee, callback=self.on_switch_mode, arg='connect', shortcut='1')
+        self.panel.add_button("2. Upgrade", icon=0xf102, callback=self.on_switch_mode, arg='upgrade', shortcut='2')
+        self.panel.add_button("3. Erase", icon=0xf12d, callback=self.on_switch_mode, arg='erase', shortcut='3')
 
-        self.mode = 'normal'
+        self.unpowered_button = DirectButton(parent=base.a2dTopLeft, pos=(0.13, 0, -0.15), text='\uf071', text_font=self.panel.icon_font, text_scale=0.1, text_fg=constants.important_label_color, relief=None, command=self.cycle_unpowered_town)
+        self.unpowered_button.hide()
+        self.unpowered_text = OnscreenText(parent=self.unpowered_button, pos=(0, -0.05), font=bold_font, text='Press tab', fg=constants.important_label_color, scale=0.04)
         self.next_unpowered_index = 0
+
+        self.mode = 'connect'
 
         self.accept('mouse1', self.on_click)
         self.accept('mouse3', self.cancel_placement)
@@ -48,6 +66,7 @@ class Game(ShowBase):
         self.accept('shift-h', self.highlight_all)
         self.accept('shift-l', self.render.ls)
         self.accept('shift-p', self.create_stats)
+        self.accept('shift-t', self.spawn_town)
         self.accept('tab', self.cycle_unpowered_town)
         self.accept('wheel_up', self.on_zoom, [1.0])
         self.accept('wheel_down', self.on_zoom, [-1.0])
@@ -55,14 +74,27 @@ class Game(ShowBase):
         self.highlighted = None
         self.pylon = None
         self.placing_wire = None
+        self.made_first_connection = False
+
+        # Initial mode
+        self.panel.select_button(0)
 
     def __task(self, task):
         self.world.step(self.clock.dt)
 
         if all(town.powered for town in self.world.towns):
             self.unpowered_button.hide()
-        else:
-            self.unpowered_button.show()
+
+        elif self.made_first_connection:
+            # Show only if we are not looking straight at the town.
+            cam_pos = self.camera_target.get_pos(self.world.root).xy
+            if any((town.pos - cam_pos).length_squared() > 25 for town in self.world.towns if not town.powered):
+                self.unpowered_button.show()
+            else:
+                self.unpowered_button.hide()
+
+        elif any(town.powered for town in self.world.towns):
+            self.made_first_connection = True
 
         mw = self.mouseWatcherNode
 
@@ -110,15 +142,34 @@ class Game(ShowBase):
                 self.highlighted.unhighlight()
             self.highlighted = None
 
-        if construct is not None and construct is not self.highlighted:
-            construct.highlight()
+        if construct is not None:
             self.highlighted = construct
 
-        if self.placing_wire:
-            if not self.placing_wire.try_set_target(self.highlighted):
-                self.placing_wire.set_target(self.pylon)
+            if self.placing_wire:
+                if not self.placing_wire.try_set_target(construct):
+                    self.placing_wire.set_target(self.pylon)
+
+                    if construct is None:
+                        construct.highlight("placing")
+                    elif construct is self.placing_wire.origin:
+                        construct.highlight("self-connect")
+                    elif construct in self.placing_wire.origin.connections and self.placing_wire.origin.connections[construct].placed:
+                        construct.highlight("already-connected")
+                    else:
+                        construct.highlight("too-far")
+                else:
+                    construct.highlight("connect")
+
+            elif not construct.highlighted:
+                construct.highlight("normal")
+
+        elif self.placing_wire:
+            self.placing_wire.set_target(self.pylon)
 
         return task.cont
+
+    def spawn_town(self):
+        self.world.sprout_town()
 
     def on_zoom(self, amount):
         lens = self.lens
@@ -131,8 +182,17 @@ class Game(ShowBase):
         elif dist_sq < constants.camera_min_zoom ** 2:
             self.camera.set_pos(self.camera.get_pos() * constants.camera_min_zoom / math.sqrt(dist_sq))
 
+    def on_switch_mode(self, mode):
+        self.cancel_placement()
+
+        if self.highlighted:
+            self.highlighted.unhighlight()
+            self.highlighted = None
+
+        self.mode = mode
+
     def on_click(self):
-        if self.mode == 'normal':
+        if self.mode == 'connect':
             if self.highlighted:
                 self.pylon = self.world.construct_pylon()
                 self.placing_wire = self.highlighted.connect_to(self.pylon)
@@ -146,6 +206,11 @@ class Game(ShowBase):
                 print("Cannot place here!")
                 return
 
+            if self.pylon and not self.world.is_buildable_terrain(self.pylon.x, self.pylon.y):
+                print("Cannot place on bad terrain!")
+                self.pylon.highlight('bad-terrain')
+                return
+
             self.placing_wire.finish_placement()
 
             # Continue placing if we just placed a pylon.
@@ -157,7 +222,22 @@ class Game(ShowBase):
             else:
                 self.placing_wire = None
                 self.pylon = None
-                self.mode = 'normal'
+                self.mode = 'connect'
+
+        elif self.mode == 'erase':
+            if self.highlighted:
+                if self.highlighted.erasable:
+                    self.highlighted.destroy()
+                    self.highlighted = None
+                else:
+                    self.highlighted.highlight('erase')
+
+        elif self.mode == 'upgrade':
+            if self.highlighted:
+                if self.highlighted.upgradable:
+                    self.highlighted.upgrade()
+                else:
+                    self.highlighted.highlight('upgrade')
 
     def cycle_unpowered_town(self):
         if all(town.powered for town in self.world.towns):
@@ -174,7 +254,7 @@ class Game(ShowBase):
 
     def highlight_all(self):
         for thing in [self.world.gen] + self.world.towns:
-            thing.highlight()
+            thing.highlight(mode=self.mode)
 
     def cancel_placement(self):
         if self.mode == 'placing':
@@ -182,4 +262,4 @@ class Game(ShowBase):
             self.placing_wire.cancel_placement()
             self.placing_wire = None
             self.pylon = None
-            self.mode = 'normal'
+            self.mode = 'connect'
