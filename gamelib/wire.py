@@ -4,6 +4,8 @@ import math
 
 from . import constants
 
+acosh_scale = math.acosh(2) * 2
+
 
 class PowerWire(object):
     resistance = 1.0
@@ -66,7 +68,7 @@ class PowerWire(object):
             for t in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
                 point = from_point * (1 - t) + to_point * t
                 if sag:
-                    point.z -= math.sin(t * math.pi) * constants.wire_sag
+                    point.z += constants.wire_sag * (math.cosh((t - 0.5) * acosh_scale) - 2)
                 drawer.draw_to(point)
             drawer.draw_to(to_point)
 
