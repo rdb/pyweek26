@@ -18,7 +18,8 @@ class World(object):
         self.plane_model = self.root.attachNewNode(cm.generate())
         self.plane_model.look_at(0, 0, -1)
         self.plane_model.set_bin('background', 0)
-        self.plane_model.set_depth_test(False)
+        self.plane_model.set_attrib(core.DepthTestAttrib.make(core.RenderAttrib.M_always))
+        self.plane_model.set_depth_write(True)
 
         mat = core.Material()
         #mat.diffuse = (218.0/255.0, 234.0/255.0, 182.0/255.0, 1)
