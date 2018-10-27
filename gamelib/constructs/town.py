@@ -3,7 +3,6 @@ from panda3d import core
 from ..construct import Construct
 from .. import constants
 
-import random
 import math
 import numpy
 
@@ -23,6 +22,16 @@ category_names = [
     # 250 MW
     "metropolis",
 ]
+
+dist_matrix = numpy.zeros((5, 5))
+for x in range(5):
+    for y in range(5):
+        dist = math.sqrt((x - 2) ** 2 + (y - 2) ** 2)
+        dist /= 2.8284271247461903
+        dist = 1 - dist
+        dist **= 2
+        dist *= 4
+        dist_matrix[x, y] = dist
 
 
 class Town(Construct):
@@ -57,10 +66,10 @@ class Town(Construct):
         self.window_mat.diffuse = (0.1, 0.1, 0.1, 1)
         self.window_emit = core.LVecBase4(self.window_mat.emission)
 
-        # Create a random seed so this city will be unique.
-        if seed is None:
-            seed = random.random()
-        self.seed = seed
+        # Make this city unique.
+        self.random_offsets = numpy.random.random_sample((5, 5)) - 0.5
+        self.random_choices = numpy.random.randint(2, size=(5, 5))
+        self.random_orients = numpy.random.randint(4, size=(5, 5))
 
         self.city = self.root.attach_new_node("city")
         self._rebuild_city()
@@ -119,19 +128,14 @@ class Town(Construct):
     def _rebuild_city(self):
         self.city.children.detach()
 
-        r = random.Random()
-        r.seed(self.seed)
-
         for x in range(5):
             for y in range(5):
-                wh = r.choice((0, 1))
-                rot = r.choice((0, 1, 2, 3))
                 which = self.grid[x][y]
                 if which > 0:
                     tiles = self.tiles_by_size[which - 1]
-                    tile = tiles[wh].copy_to(self.city)
+                    tile = tiles[self.random_choices[x, y]].copy_to(self.city)
                     tile.set_pos(x - 2, y - 2, 0)
-                    tile.set_h(90 * rot)
+                    tile.set_h(90 * self.random_orients[x, y])
                     tile.set_scale(0.5)
 
     def grow(self, dt):
@@ -145,18 +149,8 @@ class Town(Construct):
 
         # Compute new tiles.
         new_grid = numpy.zeros((5, 5), dtype=int)
-        for x in range(5):
-            for y in range(5):
-                r = random.Random()
-                r.seed(x + y * 5 - self.seed)
-                dist = math.sqrt((x - 2) ** 2 + (y - 2) ** 2)
-                dist /= 2.8284271247461903
-                dist = 1 - dist
-                dist **= 2
-                dist *= 4
-                dist += (r.random() - 0.5)
-                dist *= growth
-                new_grid[x][y] = max(min(round(dist), 4), 0)
+        new_grid = numpy.rint((dist_matrix + self.random_offsets) * growth, out=new_grid, casting='unsafe')
+        new_grid = numpy.clip(new_grid, 0, 4)
 
         # Always a house in the center.
         if new_grid[2][2] < 1:
