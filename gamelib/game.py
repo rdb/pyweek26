@@ -41,7 +41,7 @@ class Game(ShowBase):
         self.world = World()
         self.world.root.reparent_to(self.render)
 
-        self.world.root.set_shader_auto(True)
+        #self.world.root.set_shader_auto(True)
         self.world.root.set_antialias(core.AntialiasAttrib.M_auto)
 
         # Set up camera
