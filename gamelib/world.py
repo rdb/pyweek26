@@ -20,9 +20,10 @@ class World(object):
 
         mat = core.Material()
         #mat.diffuse = (218.0/255.0, 234.0/255.0, 182.0/255.0, 1)
-        mat.diffuse = (181.0/255.0, 214.0/255.0, 111.0/255.0, 1)
-        #mat.diffuse = (192.0/255.0, 239.0/255.0, 91.0/255.0, 1)
-        mat.diffuse = (2, 2, 2, 1)
+        #mat.diffuse = (181.0/255.0, 214.0/255.0, 111.0/255.0, 1)
+        mat.diffuse = (200.0/255.0, 239.0/255.0, 91.0/255.0, 1)
+        mat.diffuse = mat.diffuse * 1.5
+        #mat.diffuse = (2, 2, 2, 1)
         mat.ambient = (1, 1, 1, 1)
         self.plane_model.set_material(mat)
 
@@ -117,24 +118,25 @@ class World(object):
         # Draw grid?
         drawer = core.LineSegs()
         #drawer.set_color((0.05, 0.05, 0.05, 1))
-        drawer.set_thickness(1)
+        drawer.set_thickness(2)
 
         min_x = self.grid.shape[0] * -3
         max_x = self.grid.shape[0] * 3
         min_y = self.grid.shape[1] * -3
         max_y = self.grid.shape[1] * 3
 
-        for x in range(min_x, max_x):
-            drawer.move_to((x, min_y, 0.001))
-            drawer.draw_to((x, max_y, 0.001))
+        for x in range(min_x, max_x, 3):
+            drawer.move_to((x + 3, min_y, 0.001))
+            drawer.draw_to((x + 3, max_y, 0.001))
 
-        for y in range(min_y, max_y):
-            drawer.move_to((min_x, y, 0.001))
-            drawer.draw_to((max_x, y, 0.001))
+        for y in range(min_y, max_y, 3):
+            drawer.move_to((min_x, y + 3, 0.001))
+            drawer.draw_to((max_x, y + 3, 0.001))
 
         debug_grid = self.root.attach_new_node(drawer.create(False))
         debug_grid.set_light_off(1)
-        debug_grid.set_color_scale((0.35, 0.35, 0.35, 1))
+        #debug_grid.set_color_scale((0.35, 0.35, 0.35, 1))
+        debug_grid.set_color_scale((192.0/800.0, 239.0/800.0, 91.0/800.0, 1))
         debug_grid.show()
 
     def construct_pylon(self):
@@ -179,6 +181,10 @@ class World(object):
         trees.set_pos((x + (random.random() - 0.5) * 0.75) * constants.grid_spacing,
                       (y + (random.random() - 0.5) * 0.75) * constants.grid_spacing, 0)
         trees.set_h(random.random() * 360)
+        trees.set_color((0.1, 0.2, 0.1, 1))
+        rock = trees.find("**/Icosphere")
+        if rock:
+            rock.set_color_off(1)
 
     def sprout_obstacle(self, model):
         x, y = self.find_free_grid_spot()
@@ -193,6 +199,10 @@ class World(object):
                          (y + (random.random() - 0.5) * 0.25) * constants.grid_spacing, 0)
         obstacle.set_h(random.random() * 360)
         obstacle.set_sz(random.random() + 0.5)
+
+        if model == "hill.egg":
+            obstacle.set_color((200.0/200.0, 239.0/200.0, 91.0/200.0, 1))
+            obstacle.set_sz(random.random() * 0.75 + 0.4)
 
     def add_town(self, pos, name):
         town = constructs.Town(self, pos, name, placed=True)

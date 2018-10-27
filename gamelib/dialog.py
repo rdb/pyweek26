@@ -35,7 +35,7 @@ class Dialog(DirectObject):
         )
         self.outer.hide()
 
-        frame = DirectFrame(parent=self.inner, pos=(-0.125, 0, -0.35), frameColor=color0, frameSize=(0, 0.25, 0, 0.25))
+        frame = DirectFrame(parent=self.inner, pos=(-0.125, 0, -0.355), frameColor=color0, frameSize=(0, 0.25, 0, 0.25))
         button = DirectButton(parent=frame, pos=(0.005, 0, 0.005), text='', frameSize=(0, 0.24, 0, 0.24), text_scale=0.04, text_pos=(0.12, 0.025), frameColor=color0, text_fg=color1, relief=DGG.FLAT, command=self.on_click)
         self.button = button
 

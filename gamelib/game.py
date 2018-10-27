@@ -78,10 +78,17 @@ class Game(ShowBase):
         self.unpowered_text = OnscreenText(parent=self.unpowered_button, pos=(0, -0.05), font=bold_font, text='Press tab', fg=constants.important_label_color, scale=0.04)
         self.next_unpowered_index = 0
 
-        self.time_text = OnscreenText(parent=self.a2dBottomCenter, pos=(0, 0.1), text='January, year 1', fg=(1, 1, 1, 1), scale=0.08)
+        self.time_text = OnscreenText(parent=self.a2dBottomCenter, pos=(0, 0.15), text='January, year 1', fg=(1, 1, 1, 1), scale=0.08)
         self.time_text.hide()
         self.month = 0.0
         self.year = 0
+
+        self.power_text = OnscreenText(parent=self.a2dBottomCenter, pos=(0, 0.24), text='', fg=(1, 1, 1, 1), scale=0.05)
+        self.energy_text = OnscreenText(parent=self.a2dBottomCenter, pos=(0, 0.07), text='', fg=(1, 1, 1, 1), scale=0.05)
+        self.energy = 0.0
+        self.total_energy = 0.0
+        self.power = 0.0
+        self.energy_target = 9000.0
 
         self.dialog = Dialog(parent=self.aspect2d, icon_font=icon_font)
 
@@ -95,6 +102,7 @@ class Game(ShowBase):
         self.accept('shift-l', self.render.ls)
         self.accept('shift-p', self.create_stats)
         self.accept('shift-t', self.spawn_town)
+        self.accept('shift-f', self.on_change_speed, [10.0])
         self.accept('tab', self.cycle_unpowered_town)
         self.accept('wheel_up', self.on_zoom, [1.0])
         self.accept('wheel_down', self.on_zoom, [-1.0])
@@ -118,8 +126,8 @@ Keep growing your cities by providing them power. But be
 careful! If you overload your power cables, they will break,
 and the cities they are connected to will stop growing.
 
-I'll check in on you next year to see how you're doing.
-""", button_text='Got it!', button_icon=0xf04b, callback=self.on_game_start)
+Could you reach {:.0f} MJ before the year's end?
+""".format(self.energy_target / 10), button_text='Of course!', button_icon=0xf04b, callback=self.on_game_start)
 
     def on_game_start(self):
         for town in self.world.towns:
@@ -143,7 +151,7 @@ I'll check in on you next year to see how you're doing.
 
             index = len(self.world.towns)
             for spot in spots:
-                if self.world.grid[spot[0]][spot[1]] == 0:
+                if spot is None or self.world.grid[spot[0]][spot[1]] == 0:
                     self.world.sprout_town(grid_pos=spot)
                     break
 
@@ -152,17 +160,51 @@ I'll check in on you next year to see how you're doing.
         elif month % 12 == 0 and month > 0:
             self.game_speed = 0
             self.panel2.select_button(0)
-            self.spawn_town()
 
-            self.dialog.show("""
-You've made it to year {}!
+            if self.energy >= self.energy_target:
+                self.next_unpowered_town = len(self.world.towns)
+                self.world.sprout_town()
 
-Another town has sprung up.
-""".format(int(month // 12) + 1), button_text='Bring it on!', button_icon=0xf04b, callback=self.on_toggle_pause)
+                self.energy_target *= constants.energy_target_multiplier
+                callback = self.on_toggle_pause
+                text = """
+Well done!
+You supplied {:.1f} GJ last year and made it to year {}!
+
+Can you supply {:.1f} more GJ by the end of the year?
+
+Another town has sprung up. Press tab to focus it.
+""".format(self.energy / 10000, int(month // 12) + 1, self.energy_target / 10000)
+                self.dialog.show(text, button_text='Bring it on!', button_icon=0xf04b, callback=self.on_toggle_pause)
+            else:
+                text = """
+Unfortunately, you failed to satisfy the growing energy
+demands. You needed to produce {:.1f} GJ, but you
+produced only {:.1f} GJ.
+
+You produced a grand total of {:.1f} GJ.
+
+Better luck next time!
+""".format(self.energy_target / 10000, self.energy / 10000, self.total_energy / 10000)
+                self.dialog.show(text, button_text='Quit', button_icon=0xf011, callback=sys.exit)
+
+            self.energy = 0.0
 
     def __task(self, task):
         elapsed = self.clock.dt * self.game_speed * 0.5
         self.world.step(elapsed)
+
+        if self.game_speed > 0.0:
+            power = 0
+            for town in self.world.towns:
+                if town.powered:
+                    power += town.power
+            self.power = power
+            energy = self.power * self.clock.dt * self.game_speed
+            self.energy += energy
+            self.total_energy += energy
+            self.power_text['text'] = '{:.0f} MW'.format(self.power * 0.1)
+            self.energy_text['text'] = '{:.0f} MJ'.format(self.energy * 0.1)
 
         if self.game_speed != 0:
             new_month = self.month + elapsed * 0.4

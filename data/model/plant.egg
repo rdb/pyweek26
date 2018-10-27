@@ -1,8 +1,8 @@
 <CoordinateSystem> { Z-up }
 <Material> roof {
-  <Scalar> diffr { 0.036640 }
-  <Scalar> diffg { 0.088445 }
-  <Scalar> diffb { 0.171228 }
+  <Scalar> diffr { 0.06 }
+  <Scalar> diffg { 0.16 }
+  <Scalar> diffb { 0.3 }
   <Scalar> specr { 0.000000 }
   <Scalar> specg { 0.000000 }
   <Scalar> specb { 0.000000 }

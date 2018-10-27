@@ -9,6 +9,7 @@ grid_spacing = 6
 town_shrink_rate = 1
 wire_sag = 0.4
 wire_thickness = 3
+energy_target_multiplier = 1.45
 
 label_bob_time = 0.5
 #normal_label_color = (1, 0.6, 0.05, 1)
