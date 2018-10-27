@@ -122,7 +122,7 @@ class Construct(object):
         self.__label_text = text
         self.__label_important = important
 
-        if self.highlight_mode not in ('connect', 'erase', 'placing', 'upgrade', 'too-far', 'already-connected', 'beginning'):
+        if self.highlight_mode not in ('connect', 'erase', 'placing', 'upgrade', 'too-far', 'already-connected', 'bad-terrain'):
             self._do_set_label(text, important)
 
     def _do_set_label(self, text, important):
@@ -185,7 +185,7 @@ class Construct(object):
         elif mode == 'already-connected':
             effective_text = "Already\nconnected!"
             effective_important = True
-        if mode == 'bad-terrain':
+        elif mode == 'bad-terrain':
             effective_text = "Cannot build\non bad terrain!"
             effective_important = True
         #elif mode == 'self-connect':
