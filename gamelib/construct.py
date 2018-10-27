@@ -38,6 +38,8 @@ class Construct(object):
         self.label.set_light_off(1)
         self.label.set_color_scale_off(1)
         self.label.set_depth_write(False)
+        self.label.set_depth_test(False)
+        self.label.set_bin('fixed', 10)
         self.label.set_billboard_point_eye()
         self.label.hide()
 
@@ -55,6 +57,9 @@ class Construct(object):
         arrow.set_z(-1.5)
         arrow.set_scale(0.8)
         arrow.set_color(label_text.card_color)
+        arrow.set_depth_write(False)
+        arrow.set_depth_test(False)
+        arrow.set_bin('fixed', 0)
         self.arrow = arrow
 
         self.label_bob = Sequence(
@@ -74,6 +79,8 @@ class Construct(object):
             self.debug_label.set_light_off(1)
             self.debug_label.set_color_scale_off(1)
             self.debug_label.set_depth_write(False)
+            self.debug_label.set_depth_test(False)
+            self.debug_label.set_bin('fixed', 0)
             self.debug_label.node().set_text("0V")
 
     def __repr__(self):

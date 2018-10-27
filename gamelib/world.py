@@ -17,6 +17,8 @@ class World(object):
         cm.set_frame(-50, 50, -50, 50)
         self.plane_model = self.root.attachNewNode(cm.generate())
         self.plane_model.look_at(0, 0, -1)
+        self.plane_model.set_bin('background', 0)
+        self.plane_model.set_depth_test(False)
 
         mat = core.Material()
         #mat.diffuse = (218.0/255.0, 234.0/255.0, 182.0/255.0, 1)
@@ -138,6 +140,8 @@ class World(object):
         #debug_grid.set_color_scale((0.35, 0.35, 0.35, 1))
         debug_grid.set_color_scale((192.0/800.0, 239.0/800.0, 91.0/800.0, 1))
         debug_grid.show()
+        debug_grid.set_depth_write(False)
+        debug_grid.set_bin('background', 10)
 
     def construct_pylon(self):
         """Call this to construct additional pylons."""

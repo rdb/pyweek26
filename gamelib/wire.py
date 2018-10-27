@@ -34,6 +34,8 @@ class PowerWire(object):
             self.debug_label.set_scale(0.2)
             self.debug_label.set_light_off(1)
             self.debug_label.set_depth_write(False)
+            self.debug_label.set_depth_test(False)
+            self.debug_label.set_bin('fixed', 0)
             self.debug_label.node().set_text("0 A")
 
     def __repr__(self):
