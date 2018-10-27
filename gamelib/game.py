@@ -118,8 +118,8 @@ class Game(ShowBase):
         self.accept('shift-t', self.spawn_town)
         self.accept('shift-f', self.on_change_speed, [10.0])
         self.accept('tab', self.cycle_unpowered_town)
-        self.accept('wheel_up', self.on_zoom, [1.0])
-        self.accept('wheel_down', self.on_zoom, [-1.0])
+        self.accept('wheel_up', self.on_zoom, [-1.0])
+        self.accept('wheel_down', self.on_zoom, [1.0])
         self.accept('space', self.on_toggle_pause)
         self.accept('shift-q', sys.exit)
 
