@@ -78,6 +78,7 @@ class Game(ShowBase):
         self.panel2.add_button("Pause", icon=0xf04c, callback=self.on_change_speed, arg=0)
         self.panel2.add_button("1x Speed", icon=0xf04b, callback=self.on_change_speed, arg=1)
         self.panel2.add_button("3x Speed", icon=0xf04e, callback=self.on_change_speed, arg=3)
+        self.panel2.add_button("Quit", icon=0xf011, callback=self.on_quit, arg=None)
         self.game_speed = 0.0
 
         self.unpowered_button = DirectButton(parent=self.a2dTopLeft, pos=(0.13, 0, -0.15), text='\uf071', text_font=self.panel.icon_font, text_scale=0.1, text_fg=constants.important_label_color, relief=None, command=self.cycle_unpowered_town)
@@ -85,13 +86,13 @@ class Game(ShowBase):
         self.unpowered_text = OnscreenText(parent=self.unpowered_button, pos=(0, -0.05), font=bold_font, text='Press tab', fg=constants.important_label_color, scale=0.04)
         self.next_unpowered_index = 0
 
-        self.time_text = OnscreenText(parent=self.a2dBottomCenter, pos=(0, 0.15), text='January, year 1', fg=(1, 1, 1, 1), scale=0.08)
+        self.time_text = OnscreenText(parent=self.a2dBottomCenter, pos=(-0.1, 0.15), text='January, year 1', fg=(1, 1, 1, 1), scale=0.08)
         self.time_text.hide()
         self.month = 0.0
         self.year = 0
 
-        self.power_text = OnscreenText(parent=self.a2dBottomCenter, pos=(0, 0.24), text='', fg=(1, 1, 1, 1), scale=0.05)
-        self.energy_text = OnscreenText(parent=self.a2dBottomCenter, pos=(0, 0.07), text='', fg=(1, 1, 1, 1), scale=0.05)
+        self.power_text = OnscreenText(parent=self.a2dBottomCenter, pos=(-0.1, 0.24), text='', fg=(1, 1, 1, 1), scale=0.05)
+        self.energy_text = OnscreenText(parent=self.a2dBottomCenter, pos=(-0.1, 0.07), text='', fg=(1, 1, 1, 1), scale=0.05)
         self.energy = 0.0
         self.total_energy = 0.0
         self.power = 0.0
@@ -481,6 +482,19 @@ Better luck next time!
                         self.highlighted.highlight("upgrade-no-money")
                 else:
                     self.highlighted.highlight('upgrade')
+
+    def on_quit(self, arg=None):
+        self.pause()
+
+        text = """
+Are you sure you want to quit?
+
+You produced a grand total of {:.1f} GJ.
+
+Press shift + Q to really exit the game.
+""".format(self.total_energy / 10000)
+        self.dialog.show(text, button_text='Keep playing', button_icon=0xf04b, callback=self.on_toggle_pause)
+
 
     def cycle_unpowered_town(self, index=None):
         if all(town.powered for town in self.world.towns):
