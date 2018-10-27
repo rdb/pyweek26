@@ -10,6 +10,7 @@ from . import constants
 
 import math
 import random
+import sys
 
 
 months = ["January", "February", "March", "April", "May", "June", "July",
@@ -93,6 +94,7 @@ class Game(ShowBase):
         self.accept('wheel_up', self.on_zoom, [1.0])
         self.accept('wheel_down', self.on_zoom, [-1.0])
         self.accept('space', self.on_toggle_pause)
+        self.accept('shift-q', sys.exit)
 
         self.highlighted = None
         self.pylon = None
