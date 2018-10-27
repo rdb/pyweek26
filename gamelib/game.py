@@ -5,9 +5,15 @@ from panda3d import core
 
 from .world import World
 from .panel import Panel
+from .dialog import Dialog
 from . import constants
 
 import math
+import random
+
+
+months = ["January", "February", "March", "April", "May", "June", "July",
+         "August", "September", "October", "November", "December"]
 
 
 class Game(ShowBase):
@@ -20,6 +26,9 @@ class Game(ShowBase):
         except:
             print("Could not load Roboto-Bold.ttf")
             bold_font = None
+
+        icon_font = loader.load_font("data/font/font-awesome5.otf")
+        icon_font.pixels_per_unit = 128.0
 
         self.set_background_color((0.02, 0.01, 0.01, 1))
 
@@ -47,21 +56,28 @@ class Game(ShowBase):
         self.task_mgr.add(self.__task)
 
         # Create UI
-        self.panel = Panel(self.a2dBottomLeft, align='left')
+        self.panel = Panel(self.a2dBottomLeft, align='left', icon_font=icon_font)
         self.panel.add_button("1. Connect", icon=0xf5ee, callback=self.on_switch_mode, arg='connect', shortcut='1')
         self.panel.add_button("2. Upgrade", icon=0xf102, callback=self.on_switch_mode, arg='upgrade', shortcut='2')
         self.panel.add_button("3. Erase", icon=0xf12d, callback=self.on_switch_mode, arg='erase', shortcut='3')
 
-        self.panel2 = Panel(self.a2dBottomRight, align='right')
+        self.panel2 = Panel(self.a2dBottomRight, align='right', icon_font=icon_font)
         self.panel2.add_button("Pause", icon=0xf04c, callback=self.on_change_speed, arg=0)
         self.panel2.add_button("1x Speed", icon=0xf04b, callback=self.on_change_speed, arg=1)
         self.panel2.add_button("3x Speed", icon=0xf04e, callback=self.on_change_speed, arg=3)
-        self.game_speed = 1.0
+        self.game_speed = 0.0
 
-        self.unpowered_button = DirectButton(parent=base.a2dTopLeft, pos=(0.13, 0, -0.15), text='\uf071', text_font=self.panel.icon_font, text_scale=0.1, text_fg=constants.important_label_color, relief=None, command=self.cycle_unpowered_town)
+        self.unpowered_button = DirectButton(parent=self.a2dTopLeft, pos=(0.13, 0, -0.15), text='\uf071', text_font=self.panel.icon_font, text_scale=0.1, text_fg=constants.important_label_color, relief=None, command=self.cycle_unpowered_town)
         self.unpowered_button.hide()
         self.unpowered_text = OnscreenText(parent=self.unpowered_button, pos=(0, -0.05), font=bold_font, text='Press tab', fg=constants.important_label_color, scale=0.04)
         self.next_unpowered_index = 0
+
+        self.time_text = OnscreenText(parent=self.a2dBottomCenter, pos=(0, 0.1), text='January, year 1', fg=(1, 1, 1, 1), scale=0.08)
+        self.time_text.hide()
+        self.month = 0.0
+        self.year = 0
+
+        self.dialog = Dialog(parent=self.aspect2d, icon_font=icon_font)
 
         self.mode = 'connect'
 
@@ -81,20 +97,80 @@ class Game(ShowBase):
         self.highlighted = None
         self.pylon = None
         self.placing_wire = None
-        self.made_first_connection = False
+        self.tutorial_done = False
 
         # Initial mode
         self.panel.select_button(0)
         self.panel2.select_button(1)
 
+    def tutorial_end(self):
+        self.dialog.show("""
+Nice! You seem to get the gist of the game.
+
+Keep growing your cities by providing them power. But be
+careful! If you overload your power cables, they will break,
+and the cities they are connected to will stop growing.
+
+I'll check in on you next year to see how you're doing.
+""", button_text='Got it!', button_icon=0xf04b, callback=self.on_game_start)
+
+    def on_game_start(self):
+        for town in self.world.towns:
+            town.placed = True
+        self.tutorial_done = True
+        self.game_speed = 1.0
+        self.time_text.show()
+        self.panel.show()
+        self.panel2.show()
+        self.cycle_unpowered_town()
+
+    def on_begin_month(self, month):
+        print("Beginning month {}".format(month))
+        if month == 6:
+            # Sprout third town.
+            spots = list(self.world.beginner_town_spots)
+            random.shuffle(spots)
+
+            # If all spots are already occupied, find some other spot.
+            spots.append(None)
+
+            index = len(self.world.towns)
+            for spot in spots:
+                if self.world.grid[spot[0]][spot[1]] == 0:
+                    self.world.sprout_town(grid_pos=spot)
+                    break
+
+            self.cycle_unpowered_town(index)
+
+        elif month % 12 == 0 and month > 0:
+            self.game_speed = 0
+            self.panel2.select_button(0)
+            self.spawn_town()
+
+            self.dialog.show("""
+You've made it to year {}!
+
+Another town has sprung up.
+""".format(int(month // 12) + 1), button_text='Bring it on!', button_icon=0xf04b, callback=self.on_toggle_pause)
+
     def __task(self, task):
+        elapsed = self.clock.dt * self.game_speed * 0.5
+        self.world.step(elapsed)
+
         if self.game_speed != 0:
-            self.world.step(self.clock.dt * self.game_speed * 0.5)
+            new_month = self.month + elapsed * 0.4
+            year = int(new_month // 12)
+            self.time_text.text = months[int(new_month) % 12] + ', year ' + str(year + 1)
+
+            if int(new_month) != int(self.month):
+                self.on_begin_month(int(new_month))
+
+            self.month = new_month
 
         if all(town.powered for town in self.world.towns):
             self.unpowered_button.hide()
 
-        elif self.made_first_connection:
+        elif self.tutorial_done:
             # Show only if we are not looking straight at the town.
             cam_pos = self.camera_target.get_pos(self.world.root).xy
             if any((town.pos - cam_pos).length_squared() > 25 for town in self.world.towns if not town.powered):
@@ -103,13 +179,13 @@ class Game(ShowBase):
                 self.unpowered_button.hide()
 
         elif any(town.powered for town in self.world.towns):
-            self.made_first_connection = True
+            self.tutorial_end()
 
         mw = self.mouseWatcherNode
 
         # Keyboard controls
         hor = mw.is_button_down('arrow_right') - mw.is_button_down('arrow_left')
-        if hor != 0:
+        if hor != 0 and self.tutorial_done:
             speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
             movement = hor * speed * self.clock.dt
             abs_pos = self.world.root.get_relative_point(self.camera_target, (movement, 0, 0))
@@ -118,7 +194,7 @@ class Game(ShowBase):
             self.camera_target.set_pos(self.world.root, abs_pos)
 
         ver = mw.is_button_down('arrow_up') - mw.is_button_down('arrow_down')
-        if ver != 0:
+        if ver != 0 and self.tutorial_done:
             speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
             movement = ver * speed * self.clock.dt
             abs_pos = self.world.root.get_relative_point(self.camera_target, (0, movement, 0))
@@ -178,9 +254,14 @@ class Game(ShowBase):
         return task.cont
 
     def spawn_town(self):
+        index = len(self.world.towns)
         self.world.sprout_town()
+        self.cycle_unpowered_town(index)
 
     def on_zoom(self, amount):
+        if not self.tutorial_done:
+            return
+
         lens = self.lens
         self.camera.set_pos(self.camera.get_pos() * (1.0 + amount * 0.1))
 
@@ -203,11 +284,14 @@ class Game(ShowBase):
     def on_change_speed(self, speed):
         print("Changing game speed to {}".format(speed))
         self.game_speed = speed
+        if speed != 0:
+            self.dialog.hide()
 
     def on_toggle_pause(self):
         if self.game_speed == 0:
             self.game_speed = 1
             self.panel2.select_button(1)
+            self.dialog.hide()
         else:
             self.game_speed = 0
             self.panel2.select_button(0)
@@ -260,9 +344,12 @@ class Game(ShowBase):
                 else:
                     self.highlighted.highlight('upgrade')
 
-    def cycle_unpowered_town(self):
+    def cycle_unpowered_town(self, index=None):
         if all(town.powered for town in self.world.towns):
             return
+
+        if index is not None:
+            self.next_unpowered_index = index
 
         while True:
             self.next_unpowered_index = self.next_unpowered_index % len(self.world.towns)

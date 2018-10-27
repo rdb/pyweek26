@@ -15,9 +15,10 @@ color0 = constants.normal_label_color
 
 class Panel(DirectObject):
 
-    def __init__(self, parent, align):
+    def __init__(self, parent, align, icon_font):
         self.buttons = []
         self.icons = []
+        self.icon_font = icon_font
 
         self.align = align
         self.frame = DirectFrame(
@@ -26,9 +27,6 @@ class Panel(DirectObject):
             frameColor=(0.9, 0.9, 0.9, 0.5),
         )
 
-        self.icon_font = loader.load_font("data/font/font-awesome5.otf")
-        self.icon_font.pixels_per_unit = 128.0
-
         if align == 'right':
             self.frame.set_pos(-0.05, 0, 0.05)
         else:
@@ -36,6 +34,13 @@ class Panel(DirectObject):
 
         self.selected_button = None
         self.selected_icon = None
+
+        self.visible = False
+        self.frame.hide()
+
+    def show(self):
+        self.frame.show()
+        self.visible = True
 
     def _get_frame_size(self):
         if self.align == 'right':
@@ -74,8 +79,9 @@ class Panel(DirectObject):
             button.parent.set_x(x)
 
     def on_click(self, i, callback, arg):
-        self.select_button(i)
-        callback(arg)
+        if self.visible:
+            self.select_button(i)
+            callback(arg)
 
     def select_button(self, i):
         if self.selected_button is not None:

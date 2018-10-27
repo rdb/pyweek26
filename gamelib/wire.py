@@ -115,6 +115,9 @@ class PowerWire(object):
         if to is self.origin:
             return False
 
+        if not to.placed:
+            return False
+
         # Already a placed connection here?
         if to in self.origin.connections and self.origin.connections[to].placed:
             return False
@@ -177,7 +180,7 @@ class PowerWire(object):
     def overheated(self):
         return self.heat >= constants.max_wire_heat
 
-    def on_current_change(self, current):
+    def on_current_change(self, current, dt):
         """Called to process an update in current flowing through."""
 
         power = current ** 2 * self.resistance
@@ -187,17 +190,17 @@ class PowerWire(object):
 
         if power > 2:
             # Start overheating.
-            self.heat += min((power - 2), 1) * globalClock.dt
+            self.heat += min((power - 2), 1) * dt
             self.path.set_color_scale((1, 0, 0, 1))
             #self.path.set_color_scale((1, 3 - power, 0, 1))
         elif power > 1:
             # Cool down.
-            self.heat = max(self.heat - globalClock.dt, 0)
+            self.heat = max(self.heat - dt, 0)
             self.path.set_color_scale((1, 2 - power, 2 - power, 1))
             #self.path.set_color_scale((power - 1, 1, 0, 1))
         elif power > 0:
             # Cool down faster.
-            self.heat = max(self.heat - 2 * globalClock.dt, 0)
+            self.heat = max(self.heat - 2 * dt, 0)
             self.path.set_color_scale((1, 1, 1, 1))
             #self.path.set_color_scale((0, power, 0, 1))
         else:

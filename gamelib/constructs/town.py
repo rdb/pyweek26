@@ -39,10 +39,12 @@ class Town(Construct):
     # We make the last connection point to a town inherently stronger.
     wire_conductance = 3
 
-    def __init__(self, world, pos, name, seed=None):
+    def __init__(self, world, pos, name, placed=False):
         Construct.__init__(self, world, pos, name)
         self.size = 1
         self.powered = False
+        self.name = "dwelling"
+        self.placed = placed
 
         # Right now, we force a copy so we get a unique windowed material.
         city = loader.load_model("city.egg", noCache=True)
@@ -74,20 +76,24 @@ class Town(Construct):
         self.city = self.root.attach_new_node("city")
         self._rebuild_city()
 
-        self.attachments.append(self.city)
+        attach = self.root.attach_new_node("attach")
+        attach.set_z(0.2)
+        self.attachments.append(attach)
 
         self.power_off()
 
     @property
+    def power(self):
+        return 10 * (self.size ** 0.85)
+
+    @property
     def resistance(self):
-        power = self.size * 10
-        return (230 ** 2) / power
+        return (230 ** 2) / self.power
 
     @property
     def current(self):
         if not self.powered:
             return 0
-        power = self.size * 10
         return 230 / self.resistance
 
     def power_on(self):
@@ -119,9 +125,11 @@ class Town(Construct):
         Construct.on_disconnected(self)
 
     def _update_label(self):
+        if not self.placed:
+            return
         if self.powered:
             name = self.name[0].upper() + self.name[1:]
-            self.set_label(text="{}\n{:.0f} MW".format(name, self.size))
+            self.set_label(text="{}\n{:.0f} MW".format(name, self.power * 0.1))
         else:
             self.set_label(text="This {} is not\ngetting power!".format(self.name), important=True)
 
@@ -139,6 +147,9 @@ class Town(Construct):
                     tile.set_scale(0.5)
 
     def grow(self, dt):
+        if not self.placed:
+            return
+
         if self.powered:
             self.size += dt
         else:

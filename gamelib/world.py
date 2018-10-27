@@ -8,6 +8,8 @@ import random
 
 
 class World(object):
+    beginner_town_spots = [(2, 3), (3, 6), (1, 5), (5, 3), (3, 2)]
+
     def __init__(self):
         self.root = core.NodePath("world")
 
@@ -72,11 +74,10 @@ class World(object):
         self.grid = numpy.zeros((8, 8), dtype=int)
 
         # Build one town at a fixed location.
-        self.sprout_town(grid_pos=(5, 4), seed=5)
+        self.sprout_town(grid_pos=(5, 4))
 
-        # And one at an arbitrary, but close spot.
-        second_town_spots = [(2, 3), (4, 5), (2, 5), (5, 3), (3, 2)]
-        self.sprout_town(grid_pos=random.choice(second_town_spots))
+        # And two at an arbitrary, close, but not in-view spot.
+        self.sprout_town(grid_pos=random.choice(self.beginner_town_spots), placed=False)
 
         # Determine coordinates for generator and claim it.
         x = 3
@@ -152,7 +153,7 @@ class World(object):
 
         return x, y
 
-    def sprout_town(self, grid_pos=None, seed=None):
+    def sprout_town(self, grid_pos=None, placed=True):
         if grid_pos is not None:
             x, y = grid_pos
         else:
@@ -163,8 +164,7 @@ class World(object):
         x -= self.grid.shape[0] / 2
         y -= self.grid.shape[1] / 2
 
-        town = constructs.Town(self, (x * constants.grid_spacing, y * constants.grid_spacing), "City", seed=seed)
-        town.placed = True
+        town = constructs.Town(self, (x * constants.grid_spacing, y * constants.grid_spacing), "City", placed=placed)
         self.towns.append(town)
 
     def sprout_shrubbery(self, model):
@@ -195,8 +195,7 @@ class World(object):
         obstacle.set_sz(random.random() + 0.5)
 
     def add_town(self, pos, name):
-        town = constructs.Town(self, pos, name)
-        town.placed = True
+        town = constructs.Town(self, pos, name, placed=True)
         self.towns.append(town)
 
     def is_buildable_terrain(self, x, y):
@@ -236,7 +235,7 @@ class World(object):
 
         return closest
 
-    def calc_power(self, start):
+    def calc_power(self, start, dt):
         """Calculates the voltages at each node."""
 
         # Gather all nodes connected
@@ -325,8 +324,8 @@ class World(object):
                 else:
                     current = 0
 
-                wire.on_current_change(current)
-                if wire.overheated:
+                wire.on_current_change(current, dt)
+                if wire.overheated and dt >= 0.0:
                     hot_wires.append(wire)
 
             node.on_voltage_change(result)
@@ -350,7 +349,8 @@ class World(object):
     def step(self, dt):
         """Runs one iteration of the game logic."""
 
-        self.calc_power(self.gen)
+        self.calc_power(self.gen, dt)
 
-        for town in self.towns:
-            town.grow(dt)
+        if dt != 0.0:
+            for town in self.towns:
+                town.grow(dt)
