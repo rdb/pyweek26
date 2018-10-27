@@ -29,7 +29,7 @@ class Dialog(DirectObject):
             text_scale=0.05,
             text_fg=(0.1, 0.1, 0.1, 1),
             text_font=font,
-            text_pos=(-0.65, 0.35),
+            text_pos=(-0.65, 0.37),
             text_align=core.TextNode.A_left,
             text=text,
         )
@@ -59,6 +59,9 @@ class Dialog(DirectObject):
         else:
             self.icon['text'] = ''
 
+        self.accept('enter', self.on_click)
+
     def hide(self):
         self.outer.hide()
         self.callback = None
+        self.ignore('enter')

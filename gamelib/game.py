@@ -140,13 +140,17 @@ class Game(ShowBase):
 
     def tutorial_end(self):
         self.dialog.show("""
-Nice! You seem to get the gist of the game.
+Nice! You seem to get the basics of the game.
 
 Keep growing your cities by providing them power. But be
 careful! If you overload your power cables, they will break,
 and the cities they are connected to will stop growing.
 
-Try to reach {:.0f} MJ before the year's end!
+Try to reach {:.0f} MJ before the year ends!
+
+NB. Use the arrow
+keys to move around,
+scroll wheel to zoom.
 """.format(self.energy_target / 10), button_text='Of course!', button_icon=0xf04b, callback=self.on_game_start)
 
     def on_game_start(self):
