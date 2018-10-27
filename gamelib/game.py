@@ -70,7 +70,7 @@ class Game(ShowBase):
         self.pivot.set_h(20)
 
         self.clock = core.ClockObject.get_global_clock()
-        self.task_mgr.add(self.__task)
+        self.task_mgr.add(self.__game_task)
         self.task_mgr.add(self.__music_task)
 
         # Create UI
@@ -160,6 +160,7 @@ Try to reach {:.0f} MJ before the year's end!
         self.cycle_unpowered_town()
         self.music.play()
         self.target_play_rate = 1.0
+        self.task_mgr.add(self.__camera_task)
 
     def on_begin_month(self, month):
         print("Beginning month {}".format(month))
@@ -262,7 +263,45 @@ Better luck next time!
             self.music.set_play_rate(new_play_rate)
         return task.cont
 
-    def __task(self, task):
+    def __camera_task(self, task):
+        mw = self.mouseWatcherNode
+
+        # Keyboard controls
+        hor = mw.is_button_down('arrow_right') - mw.is_button_down('arrow_left')
+        ver = mw.is_button_down('arrow_up') - mw.is_button_down('arrow_down')
+
+        # Check mouse on camera edge.
+        p = base.win.get_pointer(0)
+        if p.in_window and not self.panel.hovered and not self.panel2.hovered:
+            size = base.win.size
+            if p.x < constants.camera_window_border:
+                hor -= 2
+            if p.x > size.x - constants.camera_window_border:
+                hor += 2
+            if p.y < constants.camera_window_border:
+                ver += 2
+            if p.y > size.y - constants.camera_window_border:
+                ver -= 2
+
+        if hor != 0:
+            speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
+            movement = hor * speed * self.clock.dt
+            abs_pos = self.world.root.get_relative_point(self.camera_target, (movement, 0, 0))
+            abs_pos.x = min(max(abs_pos.x, -20), 20)
+            abs_pos.y = min(max(abs_pos.y, -20), 20)
+            self.camera_target.set_pos(self.world.root, abs_pos)
+
+        if ver != 0:
+            speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
+            movement = ver * speed * self.clock.dt
+            abs_pos = self.world.root.get_relative_point(self.camera_target, (0, movement, 0))
+            abs_pos.x = min(max(abs_pos.x, -20), 20)
+            abs_pos.y = min(max(abs_pos.y, -20), 20)
+            self.camera_target.set_pos(self.world.root, abs_pos)
+
+        return task.cont
+
+    def __game_task(self, task):
         elapsed = self.clock.dt * self.game_speed * 0.5
         self.world.step(elapsed)
 
@@ -307,25 +346,6 @@ Better luck next time!
             self.tutorial_end()
 
         mw = self.mouseWatcherNode
-
-        # Keyboard controls
-        hor = mw.is_button_down('arrow_right') - mw.is_button_down('arrow_left')
-        if hor != 0 and self.tutorial_done:
-            speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
-            movement = hor * speed * self.clock.dt
-            abs_pos = self.world.root.get_relative_point(self.camera_target, (movement, 0, 0))
-            abs_pos.x = min(max(abs_pos.x, -20), 20)
-            abs_pos.y = min(max(abs_pos.y, -20), 20)
-            self.camera_target.set_pos(self.world.root, abs_pos)
-
-        ver = mw.is_button_down('arrow_up') - mw.is_button_down('arrow_down')
-        if ver != 0 and self.tutorial_done:
-            speed = constants.camera_speed * self.camera.get_pos().length_squared() ** 0.2
-            movement = ver * speed * self.clock.dt
-            abs_pos = self.world.root.get_relative_point(self.camera_target, (0, movement, 0))
-            abs_pos.x = min(max(abs_pos.x, -20), 20)
-            abs_pos.y = min(max(abs_pos.y, -20), 20)
-            self.camera_target.set_pos(self.world.root, abs_pos)
 
         # Mouse controls
         construct = None
@@ -499,7 +519,6 @@ You produced a grand total of {:.1f} GJ.
 Press shift + Q to really exit the game.
 """.format(self.total_energy / 10000)
         self.dialog.show(text, button_text='Keep playing', button_icon=0xf04b, callback=self.on_toggle_pause)
-
 
     def cycle_unpowered_town(self, index=None):
         if all(town.powered for town in self.world.towns):

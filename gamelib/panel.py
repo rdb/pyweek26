@@ -38,9 +38,15 @@ class Panel(DirectObject):
         self.visible = False
         self.frame.hide()
 
+        self.hovered = False
+
     def show(self):
         self.frame.show()
         self.visible = True
+
+        self.frame['state'] = DGG.NORMAL
+        self.frame.bind(DGG.WITHOUT, self.on_hover, [False])
+        self.frame.bind(DGG.WITHIN, self.on_hover, [True])
 
     def _get_frame_size(self):
         if self.align == 'right':
@@ -82,6 +88,9 @@ class Panel(DirectObject):
         if self.visible:
             self.select_button(i)
             callback(arg)
+
+    def on_hover(self, state, pos=None):
+        self.hovered = state
 
     def select_button(self, i):
         if self.selected_button is not None:

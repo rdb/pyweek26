@@ -1,6 +1,7 @@
 camera_speed = 3.0
 camera_min_zoom = 10.0
 camera_max_zoom = 50.0
+camera_window_border = 100.0
 cycle_unpowered_town_time = 0.6
 max_pylon_distance = 3
 max_wire_heat = 6.0
