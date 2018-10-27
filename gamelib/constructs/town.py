@@ -46,6 +46,14 @@ class Town(Construct):
         self.name = "dwelling"
         self.placed = placed
 
+        self.pop_sound = world.audio3d.load_sfx('pop.ogg')
+        self.pop_sound.set_volume(8)
+        world.audio3d.attach_sound_to_object(self.pop_sound, self.root)
+
+        self.shutdown_sound = world.audio3d.load_sfx('shutdown.ogg')
+        self.shutdown_sound.set_volume(32)
+        world.audio3d.attach_sound_to_object(self.shutdown_sound, self.root)
+
         # Right now, we force a copy so we get a unique windowed material.
         city = loader.load_model("city.egg", noCache=True)
         self.tiles_by_size = [
@@ -121,6 +129,7 @@ class Town(Construct):
     def on_disconnected(self):
         if self.powered:
             self.power_off()
+            self.shutdown_sound.play()
 
         Construct.on_disconnected(self)
 
@@ -170,6 +179,7 @@ class Town(Construct):
         if (new_grid != self.grid).any():
             self.grid = new_grid
             self._rebuild_city()
+            self.pop_sound.play()
 
         # Make up a nice name for it... calling a single building a "city"
         # seems so silly.

@@ -10,8 +10,9 @@ import random
 class World(object):
     beginner_town_spots = [(2, 3), (3, 6), (1, 5), (5, 3), (3, 2)]
 
-    def __init__(self):
+    def __init__(self, audio3d):
         self.root = core.NodePath("world")
+        self.audio3d = audio3d
 
         cm = core.CardMaker("card")
         cm.set_frame(-50, 50, -50, 50)
@@ -143,6 +144,11 @@ class World(object):
         debug_grid.show()
         debug_grid.set_depth_write(False)
         debug_grid.set_bin('background', 10)
+
+        self.snap_sound = self.audio3d.load_sfx('snap.ogg')
+        self.snap_sound.set_volume(64)
+        self.snap_source = self.root.attach_new_node('snap-source')
+        self.audio3d.attach_sound_to_object(self.snap_sound, self.snap_source)
 
     def construct_pylon(self):
         """Call this to construct additional pylons."""
@@ -349,6 +355,9 @@ class World(object):
         if hot_wires:
             hot_wires.sort(key=lambda wire:-wire.heat)
             print("Removing overheated wire {}".format(hot_wires[0]))
+            if hot_wires[0].origin:
+                self.snap_source.set_pos(hot_wires[0].origin.root, (0, 0, 0))
+                self.snap_sound.play()
             hot_wires[0].destroy()
 
     def find_nodes(self, start, visited=frozenset()):

@@ -1,4 +1,5 @@
 from direct.showbase.ShowBase import ShowBase
+from direct.showbase.Audio3DManager import Audio3DManager
 from direct.gui.DirectButton import DirectButton
 from direct.gui.OnscreenText import OnscreenText
 from panda3d import core
@@ -38,7 +39,11 @@ class Game(ShowBase):
         buttons.add_button("shift")
         self.mouseWatcherNode.set_modifier_buttons(buttons)
 
-        self.world = World()
+        audio3d = Audio3DManager(self.sfxManagerList[0], self.camera)
+        #audio3d.set_distance_factor(1.0)
+        audio3d.set_drop_off_factor(3.0)
+
+        self.world = World(audio3d)
         self.world.root.reparent_to(self.render)
 
         self.music = loader.load_music("Contemplation.mp3")

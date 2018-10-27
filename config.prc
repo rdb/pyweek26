@@ -11,4 +11,5 @@ win-size 1599 799
 text-default-font $THIS_PRC_DIR/data/font/Roboto-Regular.ttf
 model-path $THIS_PRC_DIR/data/model
 model-path $THIS_PRC_DIR/data/music
+model-path $THIS_PRC_DIR/data/sound
 

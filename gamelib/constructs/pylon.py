@@ -23,6 +23,14 @@ class Pylon(Construct):
         self.model.set_alpha_scale(constants.ghost_alpha)
         self.model.set_transparency(core.TransparencyAttrib.M_alpha)
 
+        self.upgrade_sound = world.audio3d.load_sfx('drill.ogg')
+        self.upgrade_sound.set_volume(14)
+        world.audio3d.attach_sound_to_object(self.upgrade_sound, self.root)
+
+        self.build_sound = world.audio3d.load_sfx('build.ogg')
+        self.build_sound.set_volume(24)
+        world.audio3d.attach_sound_to_object(self.upgrade_sound, self.root)
+
         self.attachments = []
         #for x, z in (-0.1, 0.9), (-0.1, 0.7), (-0.15, 0.8), (0, 1), (0.15, 0.9), (0.1, 0.7), (0.1, 0.9):
         #for x, z in (-0.25, 0.85), (-0.15, 1.05), (0.15, 1.05), (0.25, 0.85):
@@ -60,6 +68,8 @@ class Pylon(Construct):
             attach.set_pos(x, 0, z)
             self.attachments.append(attach)
 
+        self.upgrade_sound.play()
+
         self.on_update()
 
     def stash(self):
@@ -77,6 +87,8 @@ class Pylon(Construct):
 
         self.model.set_alpha_scale(1)
         self.model.clear_transparency()
+
+        self.build_sound.play()
 
     def on_update(self):
         """Updates state based on position information of neighbours."""
