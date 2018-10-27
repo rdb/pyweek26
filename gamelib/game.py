@@ -47,10 +47,16 @@ class Game(ShowBase):
         self.task_mgr.add(self.__task)
 
         # Create UI
-        self.panel = Panel(self.a2dBottomLeft)
+        self.panel = Panel(self.a2dBottomLeft, align='left')
         self.panel.add_button("1. Connect", icon=0xf5ee, callback=self.on_switch_mode, arg='connect', shortcut='1')
         self.panel.add_button("2. Upgrade", icon=0xf102, callback=self.on_switch_mode, arg='upgrade', shortcut='2')
         self.panel.add_button("3. Erase", icon=0xf12d, callback=self.on_switch_mode, arg='erase', shortcut='3')
+
+        self.panel2 = Panel(self.a2dBottomRight, align='right')
+        self.panel2.add_button("Pause", icon=0xf04c, callback=self.on_change_speed, arg=0)
+        self.panel2.add_button("1x Speed", icon=0xf04b, callback=self.on_change_speed, arg=1)
+        self.panel2.add_button("3x Speed", icon=0xf04e, callback=self.on_change_speed, arg=3)
+        self.game_speed = 1.0
 
         self.unpowered_button = DirectButton(parent=base.a2dTopLeft, pos=(0.13, 0, -0.15), text='\uf071', text_font=self.panel.icon_font, text_scale=0.1, text_fg=constants.important_label_color, relief=None, command=self.cycle_unpowered_town)
         self.unpowered_button.hide()
@@ -70,6 +76,7 @@ class Game(ShowBase):
         self.accept('tab', self.cycle_unpowered_town)
         self.accept('wheel_up', self.on_zoom, [1.0])
         self.accept('wheel_down', self.on_zoom, [-1.0])
+        self.accept('space', self.on_toggle_pause)
 
         self.highlighted = None
         self.pylon = None
@@ -78,9 +85,11 @@ class Game(ShowBase):
 
         # Initial mode
         self.panel.select_button(0)
+        self.panel2.select_button(1)
 
     def __task(self, task):
-        self.world.step(self.clock.dt)
+        if self.game_speed != 0:
+            self.world.step(self.clock.dt * self.game_speed * 0.5)
 
         if all(town.powered for town in self.world.towns):
             self.unpowered_button.hide()
@@ -190,6 +199,18 @@ class Game(ShowBase):
             self.highlighted = None
 
         self.mode = mode
+
+    def on_change_speed(self, speed):
+        print("Changing game speed to {}".format(speed))
+        self.game_speed = speed
+
+    def on_toggle_pause(self):
+        if self.game_speed == 0:
+            self.game_speed = 1
+            self.panel2.select_button(1)
+        else:
+            self.game_speed = 0
+            self.panel2.select_button(0)
 
     def on_click(self):
         if self.mode == 'connect':

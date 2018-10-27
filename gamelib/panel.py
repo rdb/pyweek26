@@ -15,32 +15,42 @@ color0 = constants.normal_label_color
 
 class Panel(DirectObject):
 
-    def __init__(self, parent):
+    def __init__(self, parent, align):
+        self.buttons = []
+        self.icons = []
+
+        self.align = align
         self.frame = DirectFrame(
             parent=parent,
-            frameSize=(0, 0.02, 0, 0.3),
+            frameSize=self._get_frame_size(),
             frameColor=(0.9, 0.9, 0.9, 0.5),
         )
 
         self.icon_font = loader.load_font("data/font/font-awesome5.otf")
         self.icon_font.pixels_per_unit = 128.0
 
-        self.frame.set_pos(0.05, 0, 0.05)
-
-        self.buttons = []
-        self.icons = []
+        if align == 'right':
+            self.frame.set_pos(-0.05, 0, 0.05)
+        else:
+            self.frame.set_pos(0.05, 0, 0.05)
 
         self.selected_button = None
         self.selected_icon = None
 
+    def _get_frame_size(self):
+        if self.align == 'right':
+            return (0, -0.02 - 0.27 * len(self.buttons), 0, 0.3)
+        else:
+            return (0, 0.02 + 0.27 * len(self.buttons), 0, 0.3)
+
     def add_button(self, text, icon=None, callback=None, arg=None, shortcut=None):
         i = len(self.buttons)
-        x = i * 0.27
-        frame = DirectFrame(parent=self.frame, pos=(0.02 + x, 0, 0.02), frameColor=color0, frameSize=(0, 0.25, 0, 0.25))
+        x = i * 0.27 + 0.02
+        frame = DirectFrame(parent=self.frame, pos=(x, 0, 0.02), frameColor=color0, frameSize=(0, 0.25, 0, 0.25))
         button = DirectButton(parent=frame, pos=(0.005, 0, 0.005), text=text, frameSize=(0, 0.24, 0, 0.24), text_scale=0.04, text_pos=(0.12, 0.025), frameColor=color0, text_fg=color1, relief=DGG.FLAT, command=self.on_click, extraArgs=[i, callback, arg])
         self.buttons.append(button)
 
-        self.frame['frameSize'] = (0, 0.02 + 0.27 * len(self.buttons), 0, 0.3)
+        self.frame['frameSize'] = self._get_frame_size()
 
         if icon is not None:
             icon = OnscreenText(parent=button, pos=(0.12, 0.12), text=chr(icon), font=self.icon_font, scale=0.08, fg=color1)
@@ -51,6 +61,17 @@ class Panel(DirectObject):
 
         if shortcut:
             self.accept(shortcut, self.on_click, [i, callback, arg])
+
+        if self.align == 'right':
+            self._reposition_buttons()
+
+    def _reposition_buttons(self):
+        for i, button in enumerate(self.buttons):
+            if self.align == 'right':
+                x = ((i - len(self.buttons)) * 0.27)
+            else:
+                x = i * 0.27 + 0.02
+            button.parent.set_x(x)
 
     def on_click(self, i, callback, arg):
         self.select_button(i)
