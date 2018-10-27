@@ -11,6 +11,8 @@ wire_sag = 0.4
 wire_thickness = 3
 energy_target_multiplier = 1.45
 
+upgrade_point_rarity = 18000.0
+
 label_bob_time = 0.5
 #normal_label_color = (1, 0.6, 0.05, 1)
 normal_label_color = (1, 0.32, 0.04, 1)

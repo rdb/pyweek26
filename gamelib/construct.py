@@ -122,7 +122,7 @@ class Construct(object):
         self.__label_text = text
         self.__label_important = important
 
-        if self.highlight_mode not in ('connect', 'erase', 'placing', 'upgrade', 'too-far', 'already-connected', 'bad-terrain'):
+        if self.highlight_mode not in ('connect', 'erase', 'placing', 'upgrade', 'upgrade-no-money', 'too-far', 'already-connected', 'bad-terrain'):
             self._do_set_label(text, important)
 
     def _do_set_label(self, text, important):
@@ -169,16 +169,22 @@ class Construct(object):
         elif mode == 'placing':
             effective_text = 'Click to place a\npylon here'
             effective_important = False
-        elif mode == 'upgrade':
+        elif mode == 'upgrade' or mode == 'upgrade-no-money':
             if not self.upgradable:
                 effective_text = "Only pylons can\nbe upgraded!"
                 effective_important = True
             elif self.upgraded:
                 effective_text = "Already\nupgraded!"
                 effective_important = True
+            elif mode == 'upgrade-no-money':
+                effective_text = "You need more\nupgrade points!"
+                effective_important = True
             else:
                 effective_text = "Click to upgrade\nthis {}".format(self.name)
                 effective_important = False
+        elif mode == 'yay-upgraded':
+            effective_text = "Upgraded\nsuccessfully!"
+            effective_important = False
         elif mode == 'too-far':
             effective_text = "Too far! Build\npylons closer."
             effective_important = True

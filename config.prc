@@ -1,4 +1,4 @@
-show-frame-rate-meter true
+#show-frame-rate-meter true
 
 win-fixed-size true
 win-size 1920 1080

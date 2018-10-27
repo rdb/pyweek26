@@ -90,6 +90,13 @@ class Game(ShowBase):
         self.power = 0.0
         self.energy_target = 9000.0
 
+        self.upgrade_text = OnscreenText(parent=self.a2dTopRight, align=core.TextNode.A_right, pos=(-0.21, -0.15), text='0', fg=(1, 1, 1, 1), scale=0.08)
+        self.upgrade_icon = OnscreenText(parent=self.a2dTopRight, text='\uf35b', fg=constants.normal_label_color, pos=(-0.12, -0.16), font=icon_font, scale=0.1)
+        self.upgrade_text.hide()
+        self.upgrade_icon.hide()
+        self.upgrade_counter = 0.0
+        self.upgrades = 0
+
         self.dialog = Dialog(parent=self.aspect2d, icon_font=icon_font)
 
         self.mode = 'connect'
@@ -126,7 +133,7 @@ Keep growing your cities by providing them power. But be
 careful! If you overload your power cables, they will break,
 and the cities they are connected to will stop growing.
 
-Could you reach {:.0f} MJ before the year's end?
+Try to reach {:.0f} MJ before the year's end!
 """.format(self.energy_target / 10), button_text='Of course!', button_icon=0xf04b, callback=self.on_game_start)
 
     def on_game_start(self):
@@ -157,9 +164,31 @@ Could you reach {:.0f} MJ before the year's end?
 
             self.cycle_unpowered_town(index)
 
+        elif month == 12:
+            # We don't actually check energy target here... guess we don't
+            # want to lose the player on the first year.
+            self.pause()
+            self.energy_target *= constants.energy_target_multiplier
+
+            if self.upgrades == 0:
+                # Aw, here's an upgrade point.
+                self.on_get_upgrade()
+
+            text = """
+Great! You may notice in the top-right corner that you are
+starting to obtain upgrade points. Use these to upgrade
+your pylons to increase the capacity of its wires.
+
+Can you supply {:.1f} more GJ by the end of the year?
+
+Another town has sprung up. Press tab to focus it.
+""".format(self.energy_target / 10000)
+            self.dialog.show(text, button_text='Bring it on!', button_icon=0xf04b, callback=self.on_toggle_pause)
+
+            self.world.sprout_town()
+
         elif month % 12 == 0 and month > 0:
-            self.game_speed = 0
-            self.panel2.select_button(0)
+            self.pause()
 
             if self.energy >= self.energy_target:
                 self.next_unpowered_town = len(self.world.towns)
@@ -190,6 +219,19 @@ Better luck next time!
 
             self.energy = 0.0
 
+    def on_get_upgrade(self):
+        self.upgrade_counter = 0.0
+        self.upgrades += 1
+
+        self.upgrade_text['text'] = str(self.upgrades)
+        self.upgrade_text.show()
+        self.upgrade_icon.show()
+
+    def on_use_upgrade(self):
+        self.upgrades -= 1
+
+        self.upgrade_text['text'] = str(self.upgrades)
+
     def __task(self, task):
         elapsed = self.clock.dt * self.game_speed * 0.5
         self.world.step(elapsed)
@@ -203,8 +245,12 @@ Better luck next time!
             energy = self.power * self.clock.dt * self.game_speed
             self.energy += energy
             self.total_energy += energy
+            self.upgrade_counter += energy / constants.upgrade_point_rarity
             self.power_text['text'] = '{:.0f} MW'.format(self.power * 0.1)
             self.energy_text['text'] = '{:.0f} MJ'.format(self.energy * 0.1)
+
+            if self.upgrade_counter > 1:
+                self.on_get_upgrade()
 
         if self.game_speed != 0:
             new_month = self.month + elapsed * 0.4
@@ -294,6 +340,11 @@ Better luck next time!
                 else:
                     construct.highlight("connect")
 
+            elif self.mode == 'upgrade':
+                if construct.upgradable and self.upgrades == 0:
+                    construct.highlight("upgrade-no-money")
+                elif construct.highlight_mode != 'yay-upgraded':
+                    construct.highlight("upgrade")
             elif not construct.highlighted:
                 construct.highlight("normal")
 
@@ -306,6 +357,10 @@ Better luck next time!
         index = len(self.world.towns)
         self.world.sprout_town()
         self.cycle_unpowered_town(index)
+
+    def pause(self):
+        self.game_speed = 0
+        self.panel2.select_button(0)
 
     def on_zoom(self, amount):
         if not self.tutorial_done:
@@ -342,8 +397,7 @@ Better luck next time!
             self.panel2.select_button(1)
             self.dialog.hide()
         else:
-            self.game_speed = 0
-            self.panel2.select_button(0)
+            self.pause()
 
     def on_click(self):
         if self.mode == 'connect':
@@ -388,8 +442,13 @@ Better luck next time!
 
         elif self.mode == 'upgrade':
             if self.highlighted:
-                if self.highlighted.upgradable:
-                    self.highlighted.upgrade()
+                if self.highlighted.upgradable and not self.highlighted.upgraded:
+                    if self.upgrades > 0:
+                        self.highlighted.upgrade()
+                        self.on_use_upgrade()
+                        self.highlighted.highlight("yay-upgraded")
+                    else:
+                        self.highlighted.highlight("upgrade-no-money")
                 else:
                     self.highlighted.highlight('upgrade')
 
