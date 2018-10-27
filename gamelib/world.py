@@ -147,8 +147,6 @@ class World(object):
 
         self.snap_sound = self.audio3d.load_sfx('snap.ogg')
         self.snap_sound.set_volume(64)
-        self.snap_source = self.root.attach_new_node('snap-source')
-        self.audio3d.attach_sound_to_object(self.snap_sound, self.snap_source)
 
     def construct_pylon(self):
         """Call this to construct additional pylons."""
@@ -356,7 +354,8 @@ class World(object):
             hot_wires.sort(key=lambda wire:-wire.heat)
             print("Removing overheated wire {}".format(hot_wires[0]))
             if hot_wires[0].origin:
-                self.snap_source.set_pos(hot_wires[0].origin.root, (0, 0, 0))
+                pos = hot_wires[0].origin.root.get_pos(self.root)
+                self.snap_sound.set_3d_attributes(pos[0], pos[1], pos[2], 0, 0, 0)
                 self.snap_sound.play()
             hot_wires[0].destroy()
 

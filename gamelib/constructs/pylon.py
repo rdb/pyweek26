@@ -25,11 +25,9 @@ class Pylon(Construct):
 
         self.upgrade_sound = world.audio3d.load_sfx('drill.ogg')
         self.upgrade_sound.set_volume(14)
-        world.audio3d.attach_sound_to_object(self.upgrade_sound, self.root)
 
         self.build_sound = world.audio3d.load_sfx('build.ogg')
         self.build_sound.set_volume(24)
-        world.audio3d.attach_sound_to_object(self.upgrade_sound, self.root)
 
         self.attachments = []
         #for x, z in (-0.1, 0.9), (-0.1, 0.7), (-0.15, 0.8), (0, 1), (0.15, 0.9), (0.1, 0.7), (0.1, 0.9):
@@ -68,6 +66,8 @@ class Pylon(Construct):
             attach.set_pos(x, 0, z)
             self.attachments.append(attach)
 
+        pos = self.root.get_pos(self.world.root)
+        self.upgrade_sound.set_3d_attributes(pos[0], pos[1], pos[2], 0, 0, 0)
         self.upgrade_sound.play()
 
         self.on_update()
@@ -88,6 +88,8 @@ class Pylon(Construct):
         self.model.set_alpha_scale(1)
         self.model.clear_transparency()
 
+        pos = self.root.get_pos(self.world.root)
+        self.build_sound.set_3d_attributes(pos[0], pos[1], pos[2], 0, 0, 0)
         self.build_sound.play()
 
     def on_update(self):
