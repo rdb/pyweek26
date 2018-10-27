@@ -33,6 +33,11 @@ class Game(ShowBase):
 
         self.set_background_color((0.02, 0.01, 0.01, 1))
 
+        # Disable control modifiers, etc.
+        buttons = core.ModifierButtons()
+        buttons.add_button("shift")
+        self.mouseWatcherNode.set_modifier_buttons(buttons)
+
         self.world = World()
         self.world.root.reparent_to(self.render)
 
