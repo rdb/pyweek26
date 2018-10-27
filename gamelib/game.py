@@ -41,6 +41,12 @@ class Game(ShowBase):
         self.world = World()
         self.world.root.reparent_to(self.render)
 
+        self.music = loader.load_music("Contemplation.mp3")
+        if self.music is not None:
+            self.music.set_loop(1)
+            self.music.set_play_rate(1.0)
+        self.target_play_rate = 1.0
+
         #self.world.root.set_shader_auto(True)
         self.world.root.set_antialias(core.AntialiasAttrib.M_auto)
 
@@ -60,6 +66,7 @@ class Game(ShowBase):
 
         self.clock = core.ClockObject.get_global_clock()
         self.task_mgr.add(self.__task)
+        self.task_mgr.add(self.__music_task)
 
         # Create UI
         self.panel = Panel(self.a2dBottomLeft, align='left', icon_font=icon_font)
@@ -145,6 +152,8 @@ Try to reach {:.0f} MJ before the year's end!
         self.panel.show()
         self.panel2.show()
         self.cycle_unpowered_town()
+        self.music.play()
+        self.target_play_rate = 1.0
 
     def on_begin_month(self, month):
         print("Beginning month {}".format(month))
@@ -231,6 +240,21 @@ Better luck next time!
         self.upgrades -= 1
 
         self.upgrade_text['text'] = str(self.upgrades)
+
+    def __music_task(self, task):
+        play_rate = self.music.get_play_rate()
+        if self.target_play_rate != play_rate:
+            diff = self.target_play_rate - play_rate
+            if abs(diff) < 0.01:
+                new_play_rate = self.target_play_rate
+            elif diff > 0:
+                diff = min(diff, self.clock.dt * constants.music_rate_change_speed)
+                new_play_rate = play_rate + diff
+            else:
+                diff = max(diff, -self.clock.dt * constants.music_rate_change_speed)
+                new_play_rate = play_rate + diff
+            self.music.set_play_rate(new_play_rate)
+        return task.cont
 
     def __task(self, task):
         elapsed = self.clock.dt * self.game_speed * 0.5
@@ -359,8 +383,8 @@ Better luck next time!
         self.cycle_unpowered_town(index)
 
     def pause(self):
-        self.game_speed = 0
         self.panel2.select_button(0)
+        self.on_change_speed(0)
 
     def on_zoom(self, amount):
         if not self.tutorial_done:
@@ -391,11 +415,17 @@ Better luck next time!
         if speed != 0:
             self.dialog.hide()
 
+        if speed > 1:
+            self.target_play_rate = 2.0
+        else:
+            self.target_play_rate = speed
+
     def on_toggle_pause(self):
+        if not self.tutorial_done:
+            return
         if self.game_speed == 0:
-            self.game_speed = 1
             self.panel2.select_button(1)
-            self.dialog.hide()
+            self.on_change_speed(1)
         else:
             self.pause()
 

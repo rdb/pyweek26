@@ -7,3 +7,5 @@ framebuffer-srgb true
 
 text-default-font $THIS_PRC_DIR/data/font/Roboto-Regular.ttf
 model-path $THIS_PRC_DIR/data/model
+model-path $THIS_PRC_DIR/data/music
+
