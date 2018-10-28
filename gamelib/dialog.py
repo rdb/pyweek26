@@ -8,9 +8,15 @@ from direct.showbase.DirectObject import DirectObject
 
 from . import constants
 
+import sys
+
 
 color1 = (0.9, 0.9, 0.9, 1)
 color0 = constants.normal_label_color
+
+
+if sys.version_info >= (3, 0):
+    unichr = chr
 
 
 class Dialog(DirectObject):
@@ -55,7 +61,7 @@ class Dialog(DirectObject):
 
         self.button['text'] = button_text
         if button_icon is not None:
-            self.icon['text'] = chr(button_icon)
+            self.icon['text'] = unichr(button_icon)
         else:
             self.icon['text'] = ''
 

@@ -89,7 +89,7 @@ class Game(ShowBase):
         self.panel2.add_button("Quit", icon=0xf011, callback=self.on_quit, arg=None)
         self.game_speed = 0.0
 
-        self.unpowered_button = DirectButton(parent=self.a2dTopLeft, pos=(0.13, 0, -0.15), text='\uf071', text_font=self.panel.icon_font, text_scale=0.1, text_fg=constants.important_label_color, relief=None, command=self.cycle_unpowered_town)
+        self.unpowered_button = DirectButton(parent=self.a2dTopLeft, pos=(0.13, 0, -0.15), text=u'\uf071', text_font=self.panel.icon_font, text_scale=0.1, text_fg=constants.important_label_color, relief=None, command=self.cycle_unpowered_town)
         self.unpowered_button.hide()
         self.unpowered_text = OnscreenText(parent=self.unpowered_button, pos=(0, -0.05), font=bold_font, text='Press tab', fg=constants.important_label_color, scale=0.04)
         self.next_unpowered_index = 0
@@ -107,7 +107,7 @@ class Game(ShowBase):
         self.energy_target = 9000.0
 
         self.upgrade_text = OnscreenText(parent=self.a2dTopRight, align=core.TextNode.A_right, pos=(-0.21, -0.15), text='0', fg=(1, 1, 1, 1), scale=0.08)
-        self.upgrade_icon = OnscreenText(parent=self.a2dTopRight, text='\uf35b', fg=constants.normal_label_color, pos=(-0.12, -0.16), font=icon_font, scale=0.1)
+        self.upgrade_icon = OnscreenText(parent=self.a2dTopRight, text=u'\uf35b', fg=constants.normal_label_color, pos=(-0.12, -0.16), font=icon_font, scale=0.1)
         self.upgrade_text.hide()
         self.upgrade_icon.hide()
         self.upgrade_counter = 0.0

@@ -8,9 +8,14 @@ from direct.showbase.DirectObject import DirectObject
 
 from . import constants
 
+import sys
+
 
 color1 = (0.9, 0.9, 0.9, 1)
 color0 = constants.normal_label_color
+
+if sys.version_info >= (3, 0):
+    unichr = chr
 
 
 class Panel(DirectObject):
@@ -64,7 +69,7 @@ class Panel(DirectObject):
         self.frame['frameSize'] = self._get_frame_size()
 
         if icon is not None:
-            icon = OnscreenText(parent=button, pos=(0.12, 0.12), text=chr(icon), font=self.icon_font, scale=0.08, fg=color1)
+            icon = OnscreenText(parent=button, pos=(0.12, 0.12), text=unichr(icon), font=self.icon_font, scale=0.08, fg=color1)
             icon.name = "icon"
             self.icons.append(icon)
         else:
