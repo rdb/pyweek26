@@ -12,6 +12,7 @@ from . import constants
 import math
 import random
 import sys
+import os
 
 
 months = ["January", "February", "March", "April", "May", "June", "July",
@@ -20,7 +21,9 @@ months = ["January", "February", "March", "April", "May", "June", "July",
 
 class Game(ShowBase):
     def __init__(self):
-        core.load_prc_file("config.prc")
+        main_dir = core.ExecutionEnvironment.get_environment_variable("MAIN_DIR")
+        core.load_prc_file(os.path.join(main_dir, "config.prc"))
+
         ShowBase.__init__(self)
 
         try:
