@@ -22,7 +22,8 @@ months = ["January", "February", "March", "April", "May", "June", "July",
 class Game(ShowBase):
     def __init__(self):
         main_dir = core.ExecutionEnvironment.get_environment_variable("MAIN_DIR")
-        core.load_prc_file(os.path.join(main_dir, "config.prc"))
+        main_dir = core.Filename.from_os_specific(main_dir)
+        core.load_prc_file(core.Filename(main_dir, "config.prc"))
 
         ShowBase.__init__(self)
 
