@@ -5,6 +5,7 @@ Entry in PyWeek #26  <http://www.pyweek.org/26/>
 Team: pyweek26
 Members: rdb
 
+![Screenshot](https://pyweek.org/media/dl/26/rdb26/screenshot-day7.jpg)
 
 Dependencies
 ------------
