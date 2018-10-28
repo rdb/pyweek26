@@ -1,16 +1,16 @@
 Let There Be Light
 ==================
 
-Entry in PyWeek #26  <http://www.pyweek.org/26/>
-Team: pyweek26
-Members: rdb
+This is an entry in [PyWeek 26](https://pyweek.org/26/), with the theme "Flow".
+
+[Click here to go to the PyWeek entry page.](https://pyweek.org/e/rdb26/)
 
 ![Screenshot](https://pyweek.org/media/dl/26/rdb26/screenshot-day7.jpg)
 
 Dependencies
 ------------
 
-You will need Panda3D to run the game.  Simply run:
+This game requires Python 3.  I recommend installing the dependencies (Panda3D 1.10 and numpy) via pip, using the command:
 
 ```
 pip install -r requirements.txt
@@ -58,3 +58,16 @@ And these are for developer / testing use only:
 * `shift-p`: attaches to a PStats server; requires `want-pstats true` in config.prc.
 * `shift-t`: spawns a new town in a random location.
 * `shift-f`: switches the game speed to 10x until you change it again.
+
+Acknowledgements
+----------------
+
+The music is Contemplation by OpenGameArt user Joth.
+
+Many thanks to the people who keep putting up CC0 sound effects online.
+
+Many thanks to fireclaw, wezu and others for their help testing the game.
+
+Many thanks to those in the PyWeek team and all the other entrants for contributing to make this an awesome challenge, and (hopefully) for taking the time to run and review my game.
+
+~rdb
