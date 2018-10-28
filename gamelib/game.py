@@ -46,7 +46,7 @@ class Game(ShowBase):
         self.world = World(audio3d)
         self.world.root.reparent_to(self.render)
 
-        self.music = loader.load_music("Contemplation.mp3")
+        self.music = loader.load_music("Contemplation.ogg")
         if self.music is not None:
             self.music.set_loop(1)
             self.music.set_play_rate(1.0)
